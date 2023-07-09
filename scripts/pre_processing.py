@@ -9,8 +9,8 @@ import warnings
 import copy
 import numpy as np
 import pandas as pd
-from Lib.open_flux.scripts.corrections import tilt_rotation, despike, time_lag
-from Lib.open_flux.scripts import get_data, get_rawdata, common as tt
+from Lib.OpenFlux.scripts.corrections import tilt_rotation, despike, time_lag
+from Lib.OpenFlux.scripts import get_data, get_rawdata, common as tt
 import pathlib
 cfp = pathlib.Path(__file__).parent.resolve()
 #checkifinprogress = tt.LazyCallable(os.path.abspath(os.path.join(cfp, "..", "main.py")), "checkifinprogress").__get__().fc

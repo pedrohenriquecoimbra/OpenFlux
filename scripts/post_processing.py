@@ -3,7 +3,7 @@ ADD FLAGS
 """
 
 #from .import_all import meteo_functions
-from Lib.open_flux.scripts import common as tt, get_data, get_rawdata, QA_QC
+from Lib.OpenFlux.scripts import common as tt, get_data, get_rawdata, QA_QC
 import numpy as np
 import pandas as pd
 import copy

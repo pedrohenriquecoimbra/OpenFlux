@@ -7,7 +7,7 @@ from functools import reduce
 
 import warnings
 import datetime
-from Lib.open_flux.scripts import common as tt
+from Lib.OpenFlux.scripts import common as tt
 import pandas as pd
 from pandas.api.types import is_numeric_dtype, is_object_dtype
 import os
@@ -170,7 +170,7 @@ class FluxTowerRawData(tt.datahandler):
         return interpolated
     '''
     def to_wv_class(self, xname="co2", yname="w", tname="TIMESTAMP", qcname="qc", **kwargs):
-        import Lib.open_flux.scripts.wavelet_calculate as wv_c
+        import Lib.OpenFlux.scripts.wavelet_calculate as wv_c
         print('yes')
         result = wv_c.wv(x=np.array(self.data[xname]), 
                          y=np.array(self.data[yname]),

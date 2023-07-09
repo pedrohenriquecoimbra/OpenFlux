@@ -2,7 +2,7 @@
 Functions to retrieve data from sites and put in a standard format.
 """
 
-from Lib.open_flux.scripts import common as tt
+from Lib.OpenFlux.scripts import common as tt
 import pandas as pd
 import os
 import re

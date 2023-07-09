@@ -26,8 +26,8 @@ import pandas as pd
 import pycwt as wavelet
 import matplotlib
 from matplotlib import pyplot
-from Lib.open_flux.scripts import get_data, get_rawdata, common as tt
-from Lib.open_flux.scripts.wavelets_TorrenceCompo.wave_python import waveletFunctions as wv_tc
+from Lib.OpenFlux.scripts import get_data, get_rawdata, common as tt
+from Lib.OpenFlux.scripts.wavelets_TorrenceCompo.wave_python import waveletFunctions as wv_tc
 #import scripts.get_data as get_data
 #import scripts.get_rawdata as get_rawdata
 #import scripts.common as tt
