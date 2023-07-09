@@ -1,0 +1,26 @@
+__init__:
+  <MOTHER>: C:/Users/phherigcoimb/Desktop/INRAE_longfiles/PAUL/PARIS-Rov
+  <PROJECT>: PAUL
+  <RAWPATH>: /output/raw_datasets
+  <SCRIPTS>: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/scripts
+  <SITE>: PARIS-Rov
+  <TIME_BEGIN>: 202302140000
+  <TIME_END>: 202303302359
+  <YMD>:
+  - '201901010000'
+  - '202112312359'
+  - 30min
+  path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/OpenFlux_central.py
+run_preparation:
+  first_step:
+    kwargs:
+      fmt:
+        cols:
+          raw_irgason_cellprs: press_cell
+          raw_irgason_cellt: t_cell
+          raw_irgason_co2dry: co2
+          raw_irgason_h2o: h2o
+          raw_irgason_ts: ts
+          raw_irgason_ux: u
+          raw_irgason_uy: v
+          raw_irgason_uz: w

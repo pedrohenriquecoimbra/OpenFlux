@@ -1,0 +1,347 @@
+__init__:
+  <LATITUDE>: 48.84422
+  <LONGITUDE>: 1.95191
+  <MOTHER>: C:/Users/phherigcoimb/Desktop/INRAE_longfiles/ICOS/FR-Gri
+  <PROJECT>: ICOS
+  <RAWPATH>: /output/raw_datasets
+  <SCRIPTS>: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/scripts
+  <SITE>: FR-Gri
+  <TIME_BEGIN>: 202101010030
+  <TIME_END>: 202212310000
+  <YMD>:
+  - '201901010000'
+  - '202112312359'
+  - 30min
+  API:
+    function: api
+    path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/main.py
+  ntprocess: 1
+  ntthreads: 1
+  path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/main.py
+__routine__:
+  __init__:
+    function: run_openflux
+  ymd:
+  - '201901010000'
+  - '202212312359'
+  - 30min
+  - 1D
+RawCorrections:
+  __init__:
+    <path_steps>: <SCRIPTS>/raw_data_step_callers/
+    function: call_loop
+    path: <SCRIPTS>/pre_processing.py
+  file_name: <SITE>_raw_dataset_{}.csv.gz
+  first_step:
+    kwargs:
+      fmt:
+        addkeep:
+        - t_cell
+        - press_cell
+        cut: false
+      onlynumeric: true
+      path: <MOTHER>/input/EC/
+      verbosity: true
+  multiprocess: 1
+  path_output: <MOTHER>/output/raw_datasets/
+  popup: false
+  result: false
+  steps:
+    changing units:
+      ds: changing units
+      fc:
+      - <SCRIPTS>/corrections/units.py
+      - converter
+      kwargs:
+        Xgas:
+          co2: dryppm
+        drop: false
+      name: level_6_good_units
+      overwrite: false
+      save: true
+    despike:
+      ds: despike
+      fc:
+      - <path_steps>/_2_despike.py
+      - despike
+      name: level_2
+      save: true
+    detrending:
+      ds: '-'
+      fc:
+      - <path_steps>
+      - level_7
+      name: level_7
+      skip: true
+    tilt_axis:
+      ds: tilt axis
+      fc:
+      - <path_steps>/_5_tilt_rotation.py
+      - tilt_rotation
+      kwargs:
+        __text__:
+          co_site: <SITE>
+          compaign: <PROJECT>
+          mother_folder: <MOTHER>
+        method: 2r
+        save: false
+        setup_name: <SITE>_setup_double_rotation_{}.txt
+        setup_path: <MOTHER>/output/log/pre_processing/
+      name: level_5
+    time_lag:
+      default_lag: 1
+      ds: time lag
+      fc:
+      - <path_steps>/_6_time_lag.py
+      - time_lag
+      kwargs:
+        buffer_period: 30min
+      name: level_6
+      overwrite: false
+      save: false
+      skip: false
+  steps_order:
+  - despike
+  - tilt_axis
+  - time_lag
+  - changing units
+  verbos: true
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
+run_bioclimatology:
+  averaging:
+  - 30
+  output_path: <MOTHER>/output/BM/<SITE>_BM_{}.{}mn.csv
+  overwrite: false
+  raw_kwargs:
+    file_pattern: _BM_({}[0-9]*)_(L[0-9]{2})_(F[0-9]{2}).csv
+    jlcsv:
+      log: <MOTHER>/output/BM/<SITE>_BM_error_{}.log
+    mother_path: <MOTHER>/input/BM/
+  ymd:
+  - 2020
+  - 2021
+  - 2022
+run_eddycovariance:
+  averaging:
+  - 30
+  - 5
+  output_path: <MOTHER>/output/EC/openflux/<SITE>_EC{}_{}.{}mn.csv
+  raw_kwargs:
+    file_pattern: .*_raw_dataset_([0-9]*).csv
+    jlcsv:
+      acqrt: 20
+      dateform: yyyy-mm-ddTHH:MM:SS.ss
+      delim: ','
+      header: 1
+    mother_path: <MOTHER><RAWPATH>/level_6_good_units/
+    multiprocess: 1
+  unc_kwargs:
+    file_pattern: .*_raw_dataset_([0-9]*).csv
+    jlcsv:
+      acqrt: 20
+      dateform: yyyy-mm-ddTHH:MM:SS.ss
+      delim: ','
+      header: 1
+    mother_path: <MOTHER><RAWPATH>/level_2/
+    multiprocess: 1
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
+run_uncertainty:
+  averaging:
+  - 30
+  - 5
+  output_path: <MOTHER>/output/EC/uncertainty/<SITE>_EC{}_{}.{}mn.csv
+  raw_kwargs:
+    file_pattern: .*_raw_dataset_([0-9]*).csv
+    jlcsv:
+      acqrt: 20
+      dateform: yyyy-mm-ddTHH:MM:SS.ss
+      delim: ','
+      header: 1
+    mother_path: <MOTHER><RAWPATH>/level_6_good_units/
+    multiprocess: 1
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
+run_dwt:
+  __init__:
+    name: Multilevel Decomposition
+  averaging:
+  - 30
+  - 5
+  output_path: <MOTHER>/output/DWT/DB6/<SITE>_DWT{}_{}.{}mn.csv
+  raw_kwargs:
+    file_pattern: .*_raw_dataset_([0-9]*).csv
+    mother_path: <MOTHER><RAWPATH>/level_6_good_units/
+  varstorun:
+  - co2*w
+  - h2o*w
+  - t_sonic*w
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
+run_cwt:
+  method: fcwt
+  nthreads: 1
+  output_path: <MOTHER>/output/CWT/fcwt/<SITE>_fCWT{}_{}.{}mn.csv
+  overwrite: false
+  pathtoraw: <MOTHER><RAWPATH>/level_6_good_units/
+  varstorun:
+  - co2*w
+  - h2o*w
+  - t_sonic*w
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
+run_wavelets:
+  all_freqs: true
+  fkwargs:
+    datefomatfrom: '%Y-%m-%dT%H:%M:%S.%f'
+  output_path: <MOTHER>/output/CWT/MexicanHat2r/
+  overwrite: false
+  period: 60
+  prefix: <SITE>_WV_{}.rwflx
+  prepare_kwargs:
+    max_period: 43200
+    path: <MOTHER><RAWPATH>/level_6_good_units/
+  varstorun:
+  - co2*w
+  - h2o*w
+  - t_sonic*w
+  wv_kwargs:
+    dj: 0.125
+    dt: 0.05
+    mother: MexicanHat
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
+run_crosswavelets:
+  all_freqs: true
+  fkwargs:
+    datefomatfrom: '%Y-%m-%dT%H:%M:%S.%f'
+  output_path: <MOTHER>/output/cWV/
+  overwrite: false
+  period: 60
+  prefix: <SITE>_WV_{}.rwflx
+  prepare_kwargs:
+    max_period: 43200
+    path: <MOTHER><RAWPATH>/level_6_good_units/
+  varstorun:
+  - co2*w
+  - h2o*w
+  - t_sonic*w
+  wv_kwargs:
+    dj: 0.125
+    dt: 0.05
+    mother: MexicanHat
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
+consolidate_wavelets:
+  integrating:
+  - 30
+  output_path: <MOTHER>/output/CWT/<SITE>_WV_{}.30mn.csv
+  path: <MOTHER>/output/CWT/MexicanHat2r_fast/<SITE>_WV_{}.rwflx
+  verbosity: 1
+  ymd:
+  - 2021
+  - 2022
+yearlyEC:
+  __init__:
+    <M>: EC
+    <S>: openflux/
+    function: consolidate_yearly
+  output_path: <MOTHER>/output/<M>/<SITE>_<M>{}_{}.{}mn.csv
+  path: <MOTHER>/output/<M>/<S>
+  pattern: <SITE>_<M>_([0-9]*).{}mn.csv
+  ymd:
+  - 2014
+  - 2015
+  - 2016
+  - 2017
+  - 2018
+  - 2019
+  - 2020
+  - 2021
+  - 2022
+  - 2023
+yearlyDWT:
+  __init__:
+    <M>: DWT
+    <S>: DB6/
+    function: consolidate_yearly
+    name: consolidate
+  output_path: <MOTHER>/output/<M>/<SITE>_<M>{}_{}.{}mn.csv
+  path: <MOTHER>/output/<M>/<S>
+  pattern: <SITE>_<M>_([0-9]*).{}mn.csv
+  ymd:
+  - 2014
+  - 2015
+  - 2016
+  - 2017
+  - 2018
+  - 2019
+  - 2020
+  - 2021
+  - 2022
+  - 2023
+yearlyCWT:
+  __init__:
+    <M>: CWT
+    <S>: fcwt/
+    function: consolidate_yearly
+    name: consolidate
+  output_path: <MOTHER>/output/<M>/<SITE>_<M>{}_{}.{}mn.csv
+  path: <MOTHER>/output/<M>/<S>
+  pattern: <SITE>_f<M>_([0-9]*).{}mn.csv
+  ymd:
+  - 2014
+  - 2015
+  - 2016
+  - 2017
+  - 2018
+  - 2019
+  - 2020
+  - 2021
+  - 2022
+  - 2023
+run_postprocessing:
+  output_path: <MOTHER>/output/<SITE>_full_output{}.30mn.csv
+  path: <MOTHER>/output/
+  prefix: <SITE>
+  ymd:
+  - 2019
+  - 2020
+  - 2021
+  - 2022
+gap_filling:
+  __init__:
+    <P>: <MOTHER>/output/<SITE>_full_output_
+  cols:
+    CWT:
+      flag:
+      - fITC
+      var: cwt_co2w
+    DWT:
+      flag:
+      - fITC
+      var: dwt_co2w
+    EC:
+      flag:
+      - fITC
+      - fSTA
+      var: cov_wco2
+  latitude: <LATITUDE>
+  longitude: <LONGITUDE>
+  output_path: <P>flagged_gapfilled.30mn.csv
+  path: <P>flagged.30mn.csv

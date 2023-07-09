@@ -1,0 +1,40 @@
+MACHINE READ FILE. PLEASE DO NOT MODIFY SPACES AND LINE JUMPS.
+
+__init__::
+"<PROJECT>": "ICOS"
+"<SITE>": "FR-Gri"
+"<MOTHER>": "C:/Users/phherigcoimb/Desktop/INRAE_longfiles/ICOS/FR-Gri"
+"<YMD>": ('201901010000', '202112312359', '30min')
+"<TIME_BEGIN>": 201901010030
+"<TIME_END>": 202212310000
+
+__init__::__run_selected__::
+"ymd": ('201901010000', '202212312359', '30min', '1D')
+
+__init__::OPEN_DEFAULTS::
+"TREE": False
+
+__init__::OPEN_DEFAULTS::selected_functions::run_preparation::
+"state": 0
+
+__init__::OPEN_DEFAULTS::selected_functions::run_bioclimatology::
+"state": 0
+
+__init__::OPEN_DEFAULTS::selected_functions::run_eddycovariance::
+"state": 0
+
+__init__::OPEN_DEFAULTS::selected_functions::consolidate_eddycovariance::
+"state": 0
+
+__init__::OPEN_DEFAULTS::selected_functions::run_wavelets::
+"state": 0
+
+__init__::OPEN_DEFAULTS::selected_functions::consolidate_wavelets::
+"state": 0
+
+__init__::OPEN_DEFAULTS::selected_functions::run_postprocessing::
+"state": 0
+
+__init__::OPEN_DEFAULTS::selected_functions::gap_filling::
+"state": 0
+

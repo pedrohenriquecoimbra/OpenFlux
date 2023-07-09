@@ -1,0 +1,12 @@
+MACHINE READ FILE. PLEASE DO NOT MODIFY SPACES AND LINE JUMPS.
+
+run_wavelets::
+"varstorun": ['co2*w', 'h2o*w', 't_sonic*w']
+
+run_wavelets::wv_kwargs::
+"dj": 0.25
+"mother": "MexicanHat"
+
+run_wavelets::prepare_kwargs::
+"max_period": 3600
+

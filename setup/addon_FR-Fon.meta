@@ -1,0 +1,22 @@
+__init__:
+  <LATITUDE>:
+    help: ''
+    type: float
+  <LONGITUDE>:
+    help: ''
+    type: float
+  <MOTHER>:
+    help: ''
+    type: str
+  <PROJECT>:
+    help: ''
+    type: str
+  <SITE>:
+    help: ''
+    type: str
+  <TIME_BEGIN>:
+    help: ''
+    type: int
+  <TIME_END>:
+    help: ''
+    type: int

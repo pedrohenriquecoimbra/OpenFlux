@@ -1,0 +1,219 @@
+__init__:
+  <MOTHER>: C:/Users/phherigcoimb/Desktop/INRAE_longfiles/PAUL/PARIS-Rov
+  <PROJECT>: PAUL
+  <RAWPATH>: /output/raw_datasets
+  <SCRIPTS>: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/scripts
+  <SITE>: PARIS-Rov
+  <TIME_BEGIN>: 202302140000
+  <TIME_END>: 202303302359
+  <YMD>:
+  - '201901010000'
+  - '202112312359'
+  - 30min
+  OPEN_DEFAULTS:
+    TREE: false
+    selected_functions:
+      consolidate_eddycovariance:
+        state: 0
+      consolidate_wavelets:
+        state: 0
+      run_bioclimatology:
+        state: 0
+      run_eddycovariance:
+        state: 0
+      run_preparation:
+        state: 0
+      run_wavelets_nw:
+        state: 0
+  __run_selected__:
+    __init__:
+      function: run_openflux
+      path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/OpenFlux_central.py
+    ymd:
+    - '202302150000'
+    - '202303302359'
+    - 30min
+    - 1D
+  path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/OpenFlux_central.py
+consolidate_eddycovariance:
+  __init__:
+    name: EC consolidate
+  output_path: <MOTHER>/output/EC/<SITE>_EC{}_{}.{}mn.csv
+  path: <MOTHER>/output/EC/openflux/
+  pattern: <SITE>_EC_([0-9]*).30mn.csv
+  ymd:
+  - 2014
+  - 2015
+  - 2016
+  - 2017
+  - 2018
+  - 2019
+  - 2020
+  - 2021
+  - 2022
+  - 2023
+consolidate_wavelets:
+  output_path: <MOTHER>/output/WV/<SITE>_WV_{}.30mn.csv
+  path: <MOTHER>/output/WV/MexicanHat2r/<SITE>_WV-F{}_{}.flux
+  varstorun:
+  - co2*w
+  - h2o*w
+  - t_sonic*w
+  verbosity: 1
+  ymd:
+  - 2023
+run_bioclimatology:
+  output_path: <MOTHER>/output/BM/FR-Gri_testBM_{}.csv
+  rawfls_path: <MOTHER>/input/BM/
+  ymd:
+  - 2020
+run_eddycovariance:
+  averaging:
+  - 30
+  - 5
+  output_path: <MOTHER>/output/EC/openflux/<SITE>_EC{}_{}.{}mn.csv
+  overwrite: false
+  raw_kwargs:
+    file_pattern: .*_raw_dataset_([0-9]*).csv
+    jlcsv:
+      acqrt: 20
+      dateform: yyyy-mm-ddTHH:MM:SS.ss
+      delim: ','
+      header: 1
+    mother_path: <MOTHER><RAWPATH>/level_6_good_units/
+    multiprocess: 1
+  unc_kwargs:
+    file_pattern: .*_raw_dataset_([0-9]*).csv
+    jlcsv:
+      acqrt: 20
+      dateform: yyyy-mm-ddTHH:MM:SS.ss
+      delim: ','
+      header: 1
+    mother_path: <MOTHER><RAWPATH>/level_2/
+    multiprocess: 1
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
+run_preparation:
+  __init__:
+    <path_steps>: <SCRIPTS>/raw_data_step_callers
+  file_name: <SITE>_raw_dataset_{}.csv
+  first_step:
+    kwargs:
+      fmt:
+        addkeep:
+        - t_cell
+        - press_cell
+        cols:
+          co2: co2_wet
+          co2_dry: co2
+          h2o: h2o_wet
+          h2o_dry: h2o
+          t: ts
+        cut: false
+      onlynumeric: true
+      path: <MOTHER>/input/EC/
+      verbosity: true
+  multiprocess: 1
+  path_output: <MOTHER>/output/raw_datasets/
+  popup: false
+  result: false
+  steps:
+    angle_of_attack:
+      ds: '-'
+      fc:
+      - <path_steps>
+      - level_4
+      name: level_4
+      overwrite: false
+      save: true
+      skip: true
+    changing units:
+      ds: changing units
+      fc:
+      - <SCRIPTS>/corrections/units.py
+      - converter
+      kwargs:
+        Xgas:
+          co2: dryppm
+        drop: false
+      name: level_6_good_units
+      overwrite: false
+      save: true
+    cross_wind:
+      ds: '-'
+      fc:
+      - <path_steps>
+      - level_3
+      name: level_3
+      skip: true
+    despike:
+      ds: despike
+      fc:
+      - <path_steps>/_2_despike.py
+      - despike
+      name: level_2
+      save: true
+    detrending:
+      ds: '-'
+      fc:
+      - <path_steps>
+      - level_7
+      name: level_7
+      skip: true
+    tilt_axis:
+      ds: tilt axis
+      fc:
+      - <path_steps>/_5_tilt_rotation.py
+      - tilt_rotation
+      kwargs:
+        __text__:
+          co_site: <SITE>
+          compaign: <PROJECT>
+          mother_folder: <MOTHER>
+        method: 2r
+        save: false
+        setup_name: <SITE>_setup_double_rotation_{}.txt
+        setup_path: <MOTHER>/output/log/pre_processing/
+      name: level_5
+    time_lag:
+      default_lag: 1
+      ds: time lag
+      fc:
+      - <path_steps>/_6_time_lag.py
+      - time_lag
+      kwargs:
+        buffer_period: 30min
+      name: level_6
+      overwrite: false
+      save: false
+      skip: false
+  verbos: true
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
+run_wavelets_nw:
+  all_freqs: true
+  fkwargs:
+    datefomatfrom: '%Y-%m-%dT%H:%M:%S.%f'
+  output_path: <MOTHER>/output/WV/MexicanHat2r/
+  overwrite: false
+  period: 60
+  prefix: <SITE>_WV-{}.rwflx
+  prepare_kwargs:
+    max_period: 43200
+    path: <MOTHER><RAWPATH>/level_6_good_units/
+  varstorun:
+  - co2*w
+  - h2o*w
+  - t_sonic*w
+  wv_kwargs:
+    dj: 0.125
+    dt: 0.05
+    mother: MexicanHat
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min
