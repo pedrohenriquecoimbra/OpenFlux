@@ -4,12 +4,12 @@ __init__:
   <MOTHER>: C:/Users/phherigcoimb/Desktop/INRAE_longfiles/ICOS/FR-Gri
   <PROJECT>: ICOS
   <RAWPATH>: /output/raw_datasets/level_9/
-  <SCRIPTS>: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/gargantua/Lib/open_flux/scripts
+  <SCRIPTS>: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/gargantua/Lib/OpenFlux/scripts
   <SITE>: FR-Gri
   <TIME_BEGIN>: 201901010030
   <TIME_END>: 202212310000
   <UNC_RAW>: /output/raw_datasets/level_2/
-  main: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/gargantua/Lib/open_flux/main.py
+  main: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/gargantua/Lib/OpenFlux/main.py
   ntprocess: 1
   ntthreads: 1
 __routine__:

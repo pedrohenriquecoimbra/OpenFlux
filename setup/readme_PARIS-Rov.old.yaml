@@ -2,7 +2,7 @@ __init__:
   <MOTHER>: C:/Users/phherigcoimb/Desktop/INRAE_longfiles/PAUL/PARIS-Rov
   <PROJECT>: PAUL
   <RAWPATH>: /output/raw_datasets
-  <SCRIPTS>: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/scripts
+  <SCRIPTS>: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/OpenFlux/scripts
   <SITE>: PARIS-Rov
   <TIME_BEGIN>: 202302140000
   <TIME_END>: 202303302359
@@ -28,13 +28,13 @@ __init__:
   __run_selected__:
     __init__:
       function: run_openflux
-      path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/OpenFlux_central.py
+      path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/OpenFlux/OpenFlux_central.py
     ymd:
     - '202302150000'
     - '202303302359'
     - 30min
     - 1D
-  path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/open_flux/OpenFlux_central.py
+  path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/OpenFlux/OpenFlux_central.py
 consolidate_eddycovariance:
   __init__:
     name: EC consolidate
