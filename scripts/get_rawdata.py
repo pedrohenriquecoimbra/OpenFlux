@@ -219,7 +219,7 @@ def _open_flux(path, date_format='%Y%m%d%H%M', dt=0.05, tname="TIMESTAMP", id=No
         return FluxTowerRawData(df_site, dt=dt)
 
 
-def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1, fkwargs={}, **kwargs):
+def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1, fkwargs={}, tipfile="readme.txt", **kwargs):
     df_site = pd.DataFrame()
     
     folders = [path + p + '/' for p in os.listdir(path) if os.path.isdir(path + p)]
@@ -230,9 +230,10 @@ def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1
 
         # read tips file        
         kw_ = tt.update_nested_dicts({"FILE_RAW": DEFAULT_FILE_RAW, "READ_CSV": DEFAULT_READ_CSV, "FMT_DATA": DEFAULT_FMT_DATA}, 
-                                              os.path.join(path, 'readme.txt'), os.path.join(path_, 'readme.txt'),
+                                              os.path.join(path, tipfile), os.path.join(path_, tipfile),
                                               {"FILE_RAW": fkwargs, "READ_CSV": kwargs, "FMT_DATA": fmt},
                                               fstr=lambda d: tt.readable_file(d).safe_load().to_dict())
+                                              
         kw = tt.metadata(**kw_['FILE_RAW'])
         kw_csv = kw_['READ_CSV']
         
@@ -350,8 +351,8 @@ def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1
                 warnings.warn(', '.join(_bfaf))
     """
     kw_fmt = DEFAULT_FMT_DATA
-    kw_fmt = update_dict_using_readable_file(kw_fmt, os.path.join(path, 'readme.txt'), ['FMT_DATA'])
-    kw_fmt = update_dict_using_readable_file(kw_fmt, os.path.join(path_, 'readme.txt'), ['FMT_DATA'])
+    kw_fmt = update_dict_using_readable_file(kw_fmt, os.path.join(path, tipfile), ['FMT_DATA'])
+    kw_fmt = update_dict_using_readable_file(kw_fmt, os.path.join(path_, tipfile), ['FMT_DATA'])
     kw_fmt.update(fmt)
     """
     #if kw_fmt:

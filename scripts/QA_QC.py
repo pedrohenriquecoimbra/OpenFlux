@@ -7,20 +7,29 @@ import pandas as pd
 
 
 def fITC(flagdata, latitude, **kwargs):
+    '''
+    INTEGRAL TURBULENCE CHARACTERISTICS TEST
+
+    flagdata: data to include ITC flag
+    latitude: latitude to calculate Coriolis effect
+    kwargs: used to define `n', a dictionary of variable names
+    '''
     n = {k: k for k in ['zL', 'zm', 'z0', 'ol', 'ustar', 'sigmaw']}
     n.update(**{k: v for k, v in kwargs.items() if k in n.keys()})
 
     if n['zL'] not in flagdata.columns:
-        flagdata[n['zL']] = (flagdata[n['zm']]-flagdata[n['z0']]) / flagdata.ol
+        #flagdata[n['zL']] = (flagdata[n['zm']]-flagdata[n['z0']]) / flagdata.ol
+        flagdata[n['zL']] = flagdata[n['zm']] / flagdata.ol
 
     flagdata['sTp_Tpstar_mo'] = 2 * np.abs(flagdata[n['zL']])**(1/8)
 
     flagdata.loc[(np.abs(flagdata[n['zL']]) < 0.032), 'sTp_Tpstar_mo'] = 1.3
-    
+    # flagdata.loc[(flagdata[n['zL']] < 0.032) and (flagdata[n['zL']] < 0.032), 'sTp_Tpstar_mo'] = 1.3
+
     # f: Coriolis parameter
     f = 2. * 2.*np.pi/(24.*60.*60.) * np.sin(np.deg2rad(latitude))
     
-    cond_ = (np.abs(flagdata[n['zL']]) > -0.2) * (np.abs(flagdata[n['zL']]) < 0.4)
+    cond_ = (flagdata[n['zL']] > -0.2) * (flagdata[n['zL']] < 0.4)
     flagdata.loc[cond_, 'sTp_Tpstar_mo'] = (
         0.21 * np.log(1. * f / flagdata[n['ustar']]) + 3.1)[cond_]
     

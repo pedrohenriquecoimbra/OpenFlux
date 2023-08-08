@@ -1,5 +1,5 @@
 import os
-from Lib.open_flux.scripts import common as tcom
+from Lib.OpenFlux.scripts import common as tcom
 import pathlib
 import numpy as np
 import pandas as pd

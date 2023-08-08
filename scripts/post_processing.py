@@ -78,31 +78,39 @@ def unify_dataset(ymd, path, prefix, output_path, averaging=[30], overwrite=Fals
                 {'TIMESTAMP': (pd.to_datetime('20190101'),
                             pd.to_datetime('20301231'))}
             ).data]"""
-            ep_data = [get_rawdata.open_flux(path=os.path.join(path, "EP"), 
+            ep_data = get_rawdata.open_flux(path=os.path.join(path, "EP"), 
                                             lookup=pd.date_range(str(min(ymd))+'0101', str(max(ymd))+'1231', freq='30Min'), 
-                                            onlynumeric=False).data]
+                                            onlynumeric=False).data
+            #ep_data["TIMESTAMP"] = ep_data["TIMESTAMP"] - pd.to_timedelta("30Min")
+            ep_data = [] if isinstance(ep_data, pd.DataFrame) and ep_data.empty else [ep_data]
             
             if 'EP' in sel_cols.keys():
                 ep_data = [e[[c for c in sel_cols['EP'] if c in e.columns]]
                            for e in ep_data]
-            
-            """ep_data = [e[[c for c in ['TIMESTAMP', 'co2_flux', 'qc_co2_flux', #'Rg', 'PPFD', 'air_temperature',
-                                    'rand_err_co2_flux', 'VPD', 'RH', 'LE', 'H',
-                                    'h', 
-                                    'air_molar_volume', 'air_pressure', 'e'] if c in e.columns]] for e in ep_data]"""
+
+            qc_data = get_rawdata.open_flux(path=os.path.join(path, "EP"), 
+                                            lookup=pd.date_range(str(min(ymd))+'0101', str(max(ymd))+'1231', freq='30Min'), 
+                                            onlynumeric=False,
+                                            tipfile="readme_qc.txt").data
+            #qc_data["TIMESTAMP"] = qc_data["TIMESTAMP"] - pd.to_timedelta("30Min")
+            qc_data = [] if isinstance(qc_data, pd.DataFrame) and qc_data.empty else [qc_data]
+
             if verbosity:
-                print(f'EddyPro ({len(ep_data)})')
+                print(f'EddyPro ({len(ep_data)})\nEddyPro QAQC ({len(qc_data)})')
         except Exception as e:
             warnings.warn(str(e))
             ep_data = []
+            qc_data = []
     else:
         ep_data = []
+        qc_data = []
     
     # merge all collected datasets
     fluxResult = reduce(lambda left, right: pd.merge(left, right, on=['TIMESTAMP'],
                                                      how='outer', suffixes=(None, "y")),
                         (*tt.flist(list(v_dta.values())),#*wv_data, *ec_data, *bm_data
                          *ep_data,
+                         *qc_data,
                         )).sort_values('TIMESTAMP').reset_index(drop=True)
     fluxResult = reduce(lambda left, right: pd.merge(left, right, on=['TIMESTAMP'],
                                                      how='left'),
@@ -242,9 +250,9 @@ def flag_dataset(ymd, path, prefix, output_path, postfix="_flagged", overwrite=F
 
 
 def gap_filling(path, output_path, latitude, longitude,
-                cols={'CWT': {'var': 'co2w_x', 'flag': ['ITC']},
-                      'DWT': {'var': 'co2w_y', 'flag': ['ITC']},
-                      'EC': {'var': 'cov_wco2', 'flag': ['ITC', 'STA']}},
+                cols={'CWT': {'var': 'co2w_x', 'flag': {'fITC': 0}},
+                      'DWT': {'var': 'co2w_y', 'flag': {'fITC': 0}},
+                      'EC': {'var': 'cov_wco2', 'flag': {'fITC': 0, 'fSTA': 0}}},
                 overwrite=False, verbosity=1):
     latitude = float(latitude)
     longitude = float(longitude)
@@ -304,24 +312,19 @@ def gap_filling(path, output_path, latitude, longitude,
     for k, e in cols.items():
         print(k, end='\r')
         v = e.get('var', '')
-        f = e.get('flag', [])
+        f = e.get('flag', {})
         l = e.get('flux', [])
         print(v)
 
         fill_data = copy.deepcopy(fluxData.data)
         fill_data = fill_data.rename(columns={v: 'NEE', 'qc_' + v: 'qc_NEE'})
-
         # drop flagged data
-        for flag in f:
+        for flag, flagth in f.items():
+            # correct flag name due to previous variable renaming
+            flagname = flag if flag != 'qc_' + v else 'qc_NEE'
             for flux in ['NEE'] + l:
-                fill_data.loc[fill_data[flag] > 0, flux] = np.nan
-        """
-        if 'fITC' in f:
-            fill_data.loc[fill_data.fITC > 0, 'NEE'] = np.nan
-        if 'fSTA' in f:
-            fill_data.loc[fill_data.fSTA > 0, 'NEE'] = np.nan
-        fill_data.loc[np.isnan(fill_data.fITC), 'NEE'] = np.nan
-        """
+                fill_data.loc[fill_data[flagname] > flagth, flux] = np.nan
+        
 
         fill_data.loc[fill_data.Rg < 0, 'Rg'] = 0
 

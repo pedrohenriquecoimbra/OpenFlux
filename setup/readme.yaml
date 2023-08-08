@@ -334,21 +334,21 @@ gap_filling:
   cols:
     CWT:
       flag:
-      - fITC
+        flag(w): 2
       var: cwt_co2w
     DWT:
       flag:
-      - fITC
+        flag(w): 2
       var: dwt_co2w
     EC:
       flag:
-      - fITC
-      - fSTA
+        flag(w): 2
+        flag(w/co2): 2
       var: cov_wco2
     EP:
       flag:
-      - fITC
-      - fSTA
+        flag(w): 2
+        flag(w/co2): 2
       var: co2_flux
   latitude: <LATITUDE>
   longitude: <LONGITUDE>

@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from Lib.open_flux.scripts import common as tcom
+from Lib.OpenFlux.scripts import common as tcom
 import pathlib
 import warnings
 # current file path

@@ -5,7 +5,7 @@ import pandas as pd
 import os
 import numpy as np
 import pandas as pd
-from Lib.open_flux.scripts import common as tcom
+from Lib.OpenFlux.scripts import common as tcom
 import pathlib
 # current file path
 cfp = pathlib.Path(__file__).parent.resolve()

@@ -546,28 +546,28 @@ gap_filling:
     CWT:
       flag:
         help: ''
-        type: list
+        type: dict
       var:
         help: ''
         type: str
     DWT:
       flag:
         help: ''
-        type: list
+        type: dict
       var:
         help: ''
         type: str
     EC:
       flag:
         help: ''
-        type: list
+        type: dict
       var:
         help: ''
         type: str
     EP:
       flag:
         help: ''
-        type: list
+        type: dict
       var:
         help: ''
         type: str

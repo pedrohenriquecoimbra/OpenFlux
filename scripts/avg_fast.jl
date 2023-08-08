@@ -108,14 +108,14 @@ end
 
 
 function biomet_all(list_paths, list_times=nothing, csvargs=nothing, round_min=30, output_path=nothing)
-    #df = DataFrame()
+    df = DataFrame()
     #if isnothing(header)
     #    header = repeat([1], outer=length(list_paths))
     #end
     for i in eachindex(list_paths)
         try
             df_ = biomet_average(list_paths[i], (isnothing(list_times) ? list_times : list_times[i]), (eltype(csvargs) <: Pair ? csvargs : csvargs[i]), round_min, nothing)
-            if i == 1
+            if isempty(df)
                 df = df_
             else
                 df = outerjoin(df, df_, on=:TIMESTAMP, makeunique=true)

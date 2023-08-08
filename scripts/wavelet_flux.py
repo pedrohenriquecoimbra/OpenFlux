@@ -59,9 +59,10 @@ def calculate_coi(N, dt=0.05, param=6, mother="MORLET"):
     #        np.insert(np.flipud(np.arange(0, int(N / 2) - 1)), [-1], [1E-5])))
 
     # from pycwt
+    # fourier factor (c)
+    c = wavelet.flambda() * wavelet.coi()
     coi = (N / 2 - np.abs(np.arange(0, N) - (N - 1) / 2))
-    coi = wavelet.flambda() * wavelet.coi() * dt * coi
-    # coi = λ * c * dt * coi
+    coi = c * dt * coi
     return coi
 
 def coitomask(coi, shape, scales, false=False):
@@ -98,19 +99,20 @@ def bufferforfrequency_dwt(N=0, n_=30*60*20, fs=20, level=None, f0=None, max_ite
             break
     return (n0-N) * fs**-1
 
-def bufferforfrequency(f0, dt=0.05, param=6, mother="MORLET"):
+
+def bufferforfrequency(f0, dt=0.05, param=6, mother="MORLET", wavelet=pycwt.Morlet(6)):
     #check if f0 in right units
     # f0 ↴
     #    /\
     #   /  \
     #  /____\
     # 2 x buffer
-
-    wavelet = pycwt.Morlet(6)
-    n0 = 1 + (2 * (1/f0) * (wavelet.flambda() * wavelet.coi() * dt)**-1)
+    
+    # _, _, c, _ = wv_tc.wave_bases(mother=mother, k=np.array([-1, -1]), scale=-1, param=param)
+    c = wavelet.flambda() * wavelet.coi()
+    n0 = 1 + (2 * (1/f0) * (c * dt)**-1)
     N = int(np.ceil(n0 * dt))
 
-    # _, _, c, _ = wv_tc.wave_bases(mother=mother, k=np.array([-1, -1]), scale=-1, param=param)
     # xmax = f0 / (c * dt)
     # N = ((xmax + 2) * 2) - 1
     # N int(np.ceil(N * dt)) #(1 / (λ * c)) * f0
@@ -231,7 +233,7 @@ def loaddatawithbuffer(d0, d1=None, freq=None, buffer=None,
         d1 = pd.to_datetime(d1) + pd.Timedelta(buffer*1.1, unit='s')
         data.filter({tname: (d0, d1)})
 
-    # garantee all data points
+    # garantee all data points, if any valid time, else empty dataframe
     if np.sum(np.isnat(data.data.TIMESTAMP)==False):
         data.data = pd.merge(pd.DataFrame({tname: pd.date_range(*tt.nanminmax(data.data.TIMESTAMP), freq="0.05S")}),
                             data.data,

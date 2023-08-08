@@ -1,0 +1,20 @@
+run_cdwt:
+  __init__:
+    function: run_covcs
+  averaging:
+  - 30
+  - 5
+  output_path: <MOTHER>/output/ECCS/<SITE>_ECCS{}_{}.{}mn.csv
+  raw_kwargs:
+    path: <MOTHER><RAWPATH>
+  varstorun:
+  - w*co2*h2o
+  - w*co2*ts
+  - w*h2o*co2
+  - w*h2o*ts
+  - w*ts*co2
+  - w*ts*h2o
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min

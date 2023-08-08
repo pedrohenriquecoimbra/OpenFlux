@@ -26,11 +26,11 @@ exit /b 1
 
 @cd %~dp0/../..
 
-@if exist "%~dp0logo.ico" set "logo=%~dp0logo.ico"
-@if exist "%~dp0logo.png" set "logo=%~dp0logo.png"
-@if exist "%~dp0logo.jpg" set "logo=%~dp0logo.jpg"
+:: @if exist "%~dp0logo.ico" set "logo=%~dp0logo.ico"
+:: @if exist "%~dp0logo.png" set "logo=%~dp0logo.png"
+:: @if exist "%~dp0logo.jpg" set "logo=%~dp0logo.jpg"
 
-@python __gargantua__.py path="Lib/open_flux/setup/readme.yaml" lib="open_flux" welcometxt="OpenFLUX" font="small"
+@python __gargantua__.py path="Lib/OpenFlux/setup/readme.yaml" lib="OpenFlux" waittxt="OpenFlux v0.1" welcometxt="OpenFLUX" font="small"
 
 @echo %ERRORLEVEL%
 

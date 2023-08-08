@@ -18,8 +18,8 @@ import glob
 import __gargantua__ as mm
 from __scripts__ import gargantua as gg
 from __scripts__ import common as gt
-from Lib.open_flux.scripts import get_data, get_rawdata, wavelet_flux as wc, pre_processing as prep, post_processing as posp, QA_QC, multilevel_decomposition as mld
-from Lib.open_flux.scripts.corrections.despike import mauder2013
+from Lib.OpenFlux.scripts import get_data, get_rawdata, wavelet_flux as wc, pre_processing as prep, post_processing as posp, QA_QC, multilevel_decomposition as mld
+from Lib.OpenFlux.scripts.corrections.despike import mauder2013
 posp.QAQC = QA_QC
 
 pcd = pathlib.Path(__file__).parent.resolve()
@@ -133,9 +133,9 @@ def run_metadata(ymd, averaging=[30], fixed_values={}, output_path=None, verbosi
 def run_bioclimatology(ymd, raw_kwargs, averaging=[30], overwrite=False, output_avg=True, output_path=None, verbosity=1):
     if verbosity: print('\nRUNNING BIOCLIMATOLOGY\n')
 
-    bm_avg = gg.LazyCallable("Lib/open_flux/scripts/avg_fast.jl",
+    bm_avg = gg.LazyCallable("Lib/OpenFlux/scripts/avg_fast.jl",
                              "biomet_all").__get__().fc
-    df_avg = gg.LazyCallable("Lib/open_flux/scripts/avg_fast.jl",
+    df_avg = gg.LazyCallable("Lib/OpenFlux/scripts/avg_fast.jl",
                              "average_similar_columns").__get__().fc
 
     for a in averaging:
@@ -214,12 +214,12 @@ def run_bioclimatology(ymd, raw_kwargs, averaging=[30], overwrite=False, output_
     return
 
 
-def run_eddycovariance(ymd, raw_kwargs, unc_kwargs, *a, script=["Lib/open_flux/scripts/avg_fast.jl", "eddycov_average"], **kw,):
+def run_eddycovariance(ymd, raw_kwargs, unc_kwargs, *a, script=["Lib/OpenFlux/scripts/avg_fast.jl", "eddycov_average"], **kw,):
     print('\nRUNNING EDDY COVARIANCE\n')
     return run_covariancestats(ymd, raw_kwargs, unc_kwargs, *a, _script_=script, **kw)
 
 
-def run_uncertainty(ymd, raw_kwargs, *a, script=["Lib/open_flux/scripts/avg_fast.jl", "randomuncertainty"], **kw):
+def run_uncertainty(ymd, raw_kwargs, *a, script=["Lib/OpenFlux/scripts/avg_fast.jl", "randomuncertainty"], **kw):
     print('\nRUNNING UNCERTAINTY\n')
     return run_covariancestats(ymd, raw_kwargs, *a, _script_=script, **kw)
 
@@ -234,7 +234,7 @@ def run_covariancestats(ymd, *args, output_path, _script_, averaging=[30], overw
         script = gg.LazyCallable(*_script_).__get__().fc
     elif isinstance(_script_, str):
         script = gg.LazyCallable(
-            "Lib/open_flux/scripts/avg_fast.jl", _script_).__get__().fc
+            "Lib/OpenFlux/scripts/avg_fast.jl", _script_).__get__().fc
     elif isinstance(_script_, queue.Queue):
         script = _script_.get()
         #_script_.put(script)
@@ -337,7 +337,7 @@ def DEPRECATED_run_uncertainty(ymd, raw_kwargs, output_path, averaging=[30], ove
         return
     print("todo", time.time()-t0)
 
-    jlfunc = gg.LazyCallable("Lib/open_flux/scripts/avg_fast.jl", "randomuncertainty").__get__().fc
+    jlfunc = gg.LazyCallable("Lib/OpenFlux/scripts/avg_fast.jl", "randomuncertainty").__get__().fc
 
     print("jlfunc", time.time()-t0)
     for a in averaging:
@@ -410,6 +410,145 @@ def consolidate_yearly(ymd, path, pattern, output_path, averaging=None):
                 print(os.path.basename(outp_.format(p, y, str(a).zfill(2))), ': Saved.', ' '*15, end='\n', sep='')
                     
                 del datf
+
+
+def run_covcs(ymd, varstorun, raw_kwargs, output_path, wt_kwargs={}, 
+           method="dwt", Cφ=1, nan_tolerance=.3,
+           averaging=[30], condsamp=[], integrating=30*60, 
+           overwrite=False, saveraw=False, file_duration="1D", verbosity=1):
+    if verbosity: print('\nRUNNING COVARIANCE COND. SAMP.\n')
+        
+    dt = 1 / wt_kwargs.get("fs", 20)
+    buffer = 0
+    suffix = raw_kwargs['suffix'] if 'suffix' in raw_kwargs.keys() else ''
+    
+    _, _, _f = ymd
+    ymd = gt.list_time_in_period(*ymd, file_duration)
+
+    for i, yl in enumerate(ymd):
+        date = re.sub('[-: ]', '', yl.strftime('%')[0])
+        if file_duration.endswith("D"): date = date[:8]
+        if file_duration.endswith("H") or file_duration.endswith("Min"): date = date[:12]
+        
+        # recheck if files exist and overwrite option
+        # doesn't save time (maybe only save 5min)
+        if not overwrite:
+            avg_ = []
+            for a in averaging:
+                if not overwrite and os.path.exists(output_path.format(suffix, date, str(a).zfill(2))):
+                    avg_ += [a]
+            avg_ = list(set(averaging)-set(avg_))
+            if not avg_:
+                if verbosity > 1: warnings.warn("exists: File already exists ({}).".format(date))
+                continue
+        else:
+            avg_ = [a for a in averaging]
+        
+        curoutpath_inprog = output_path.format(suffix, str(date), "").rsplit(".", 1)[
+            0] + ".inprogress"
+        if gt.checkifinprogress(curoutpath_inprog): continue
+        
+        # load files
+        # data = get_rawdata.open_flux(lookup=yl, **raw_kwargs).data
+        data = wc.loaddatawithbuffer(
+            yl, d1=None, freq=_f, buffer=buffer, **raw_kwargs)
+        if data.empty:
+            if verbosity>1: warnings.warn("exit1: No file was found ({}).".format(date))
+            if os.path.exists(curoutpath_inprog): os.remove(curoutpath_inprog)
+            continue
+        
+        # ensure time is time
+        data.TIMESTAMP = pd.to_datetime(data.TIMESTAMP)
+        
+        # ensure continuity
+        data = pd.merge(pd.DataFrame({"TIMESTAMP": pd.date_range(*gt.nanminmax(data.TIMESTAMP), freq=f"{dt}S")}),
+                            data, on="TIMESTAMP", how='outer').reset_index(drop=True)
+        data["TIMESTAMP_hh"] = data.TIMESTAMP.dt.floor("30Min")
+
+        # main run
+        # . collect all wavelet transforms
+        # . calculate covariance
+        # . conditional sampling (optional)
+        # . save in dataframe and .csv
+        φ = {}
+        μ = {}
+        dat_fullspectra = {a: [] for a in avg_}
+        dat_fluxresult = {a: [] for a in avg_}
+
+        # run by couple of variables (e.g.: co2*w -> mean(co2'w'))
+        for xy, condsamp in [(v.split('*')[:2], v.split('*')[2:]) for v in varstorun]:
+            # run wavelet transform
+            for v in xy + condsamp:
+                if v == "1":
+                    φ[v] = np.array([1]*len(data))
+                    μ[v] = np.array([1]*len(data))
+                if v not in φ.keys():
+                    data = data.merge(data[["TIMESTAMP_hh", v]].groupby("TIMESTAMP_hh").agg(np.nanmean).reset_index(
+                        drop=False), on="TIMESTAMP_hh", suffixes=(None, "_hh"))
+                    signal = np.array(data[v]-data[v+"_hh"])
+                    signan = np.isnan(signal)
+                    φ[v] = signal
+                    μ[v] = signan *1
+
+            # calculate covariance
+            Y12 = np.array(φ[xy[0]]) * np.array(φ[xy[1]])
+            φs = {''.join(xy): Y12}
+            μs = {''.join(xy): np.where(np.where(
+                np.array(μ[xy[0]]), 0, 1) * np.where(np.array(μ[xy[1]]), 0, 1), 0, 1)}
+
+            # conditional sampling
+            φc = [np.array(φ[xy[0]]) * np.array(φ[c]) for c in condsamp]
+            φc = mld.conditional_sampling(Y12, *φc) if φc else {}
+            φs.update({k.replace("xy", ''.join(xy)).replace(
+                'a', ''.join(condsamp)): v for k, v in φc.items()})
+
+            # repeats nan flag wo/ considering conditional sampling variables
+            μs.update(
+                {k: μs[k if k in μs.keys() else [k_ for k_ in μs.keys() if k.startswith(k_)][0]] for k in φs.keys()})
+
+            # array to dataframe for averaging
+            def __arr2dataframe__(Y, qc=np.nan, prefix=''.join(xy), 
+                                  id=np.array(data.TIMESTAMP)):
+                __temp__ = wc.matrixtotimetable(id, Y, columns=["{}".format(prefix)])
+                __temp__["{}_qc".format(prefix)] = qc
+                return __temp__
+
+            __temp__ = reduce(lambda left, right: pd.merge(left, right[['TIMESTAMP'] + list(right.columns.difference(left.columns))], on="TIMESTAMP", how="outer"),
+                              [__arr2dataframe__(Y, μs[n], prefix=n) for n, Y in φs.items()])
+            
+            for a in avg_:
+                __tempa__ = copy.deepcopy(__temp__)
+                __tempa__["TIMESTAMP"] = pd.to_datetime(np.array(__tempa__.TIMESTAMP)).ceil(
+                    str(a)+'Min')
+                __tempa__ = __tempa__.groupby("TIMESTAMP").agg(np.nanmean).reset_index()
+
+                maincols = ["TIMESTAMP", ''.join(xy)]
+                if φc:
+                    for c in ['++', '+-', '--', '-+']:
+                        maincols += [''.join(xy) + c + ''.join(condsamp)]
+                        #__tempa__.insert(1, ''.join(xy) + c + ''.join(condsamp), __tempa__[["{}".format(''.join(xy) + c + ''.join(condsamp))]])
+                #__tempa__.insert(1, ''.join(xy), np.sum(__tempa__[["{}".format(''.join(xy))]], axis=1))
+
+                dat_fullspectra[a] += [__tempa__]
+                dat_fluxresult[a] += [__tempa__[maincols]]
+                del __tempa__
+        
+        for a in avg_:
+            dat_fullspectra[a] = reduce(lambda left, right: pd.merge(left, right, on="TIMESTAMP", how="outer"),
+                                 dat_fullspectra[a])
+            dat_fluxresult[a] = reduce(lambda left, right: pd.merge(left, right, on="TIMESTAMP", how="outer"),
+                                 dat_fluxresult[a])
+            
+            gt.mkdirs(output_path.format(suffix, str(date), str(a).zfill(2)))
+            dat_fullspectra[a].to_csv(output_path.format(
+                suffix + "_full_cospectra", str(date), str(a).zfill(2)), index=False)
+            dat_fluxresult[a].to_csv(output_path.format(
+                suffix, str(date), str(a).zfill(2)), index=False)
+                
+        if os.path.exists(curoutpath_inprog): os.remove(curoutpath_inprog)
+        if verbosity:
+            print(date, len(yl), f'{int(100*i/len(ymd))} %', end='\n')
+    return
 
 def run_wt(ymd, varstorun, raw_kwargs, output_path, wt_kwargs={}, 
            method="dwt", Cφ=1, nan_tolerance=.3,
@@ -1152,9 +1291,10 @@ def revisit_rawdata_filtercols(path, pattern, keepcols=[], excludecols=[]):
         
         gt.mkdirs(v)
         df_.to_csv(v, index=False)
-        
+
 
 if __name__ == '__main__':
+    sys.exit("ERROR: cannot run independently")
     #args = [a for a in sys.argv[3:] if '=' not in a]
     #kwargs = dict([a.split('=') for a in sys.argv[3:] if '=' in a])
-    mm.main(path="Lib/open_flux/setup/readme.yaml", lib="open_flux", welcometxt="OpenFLUX", font="small")
+    #mm.main(path="Lib/OpenFlux/setup/readme.yaml", lib="OpenFlux", waittxt="OpenFlux v0.1", welcometxt="OpenFLUX", font="small")
