@@ -35,7 +35,7 @@ REddyProcsMDSGapFill = function(EProc, cols_to_apply=c('NEE'), verbosity=0){
   return(EProc)
 }
 
-do_gapfill = function(path_to_file, NEE_name="co2_flux",
+do_gapfill = function(path_to_file, met_path="", NEE_name="co2_flux",
                       climcols=c('Tair', 'VPD', 'Rg'), 
                       fluxcols=c('NEE'),
                       Lat=43, Lon=47.5, 
@@ -46,14 +46,18 @@ do_gapfill = function(path_to_file, NEE_name="co2_flux",
   # load csv from path
   data1 <- read_csv(path_to_file, na = c("NAN", "NA", "NaN", -9999))
   
-  #rg <- read_csv("C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/data/flux/ICOS/FR-Fon/FR-Fon_Rg.csv", 
-  #               na = c("NA", -9999))
+  if (met_path!=""){
+    meteo <- read_csv(met_path, na = c("NAN", "NA", "NaN", -9999)) %>% 
+      mutate("TIMESTAMP" = as.POSIXct(as.character(TIMESTAMP_END), tryFormat=c("%Y%m%d%H%M"), tz="GMT")) %>% 
+      # rename(any_of(c("Rg"="SW_IN", "rH"="RH"))) %>% 
+      select(c("TIMESTAMP", "SW_IN", "RH"))
+    data1 <- merge(data1, meteo, by="TIMESTAMP", all.x=T, suffixes=c("_", ""))
+  }
            
   data1 <- data1 %>% 
+    filter(TIMESTAMP > as.POSIXct(as.character("201904010000"), tryFormat=c("%Y%m%d%H%M"), tz="GMT")) %>%
     # guarantee time is time
     mutate(TIMESTAMP = as.POSIXct(TIMESTAMP, tz='GMT')) %>% 
-    # merge meteo (TMP)
-    #merge(rg, by="TIMESTAMP", all.x=T, suffixes=c("_", "")) %>% 
     # guarantee time continuity
     merge(tibble("TIMESTAMP"=seq(min(data1$TIMESTAMP, na.rm=T), max(data1$TIMESTAMP, na.rm=T), by="30 min")), 
           by="TIMESTAMP", all=T) %>% 
@@ -89,7 +93,7 @@ do_gapfill = function(path_to_file, NEE_name="co2_flux",
   EProc$sSetLocationInfo(LatDeg = Lat, LongDeg = Lon, TimeZoneHour = 1)
   #Gap-filling of Tair, VPD, NEE and LE
   for (c in climcols){
-    EProc$sMDSGapFill(c, FillAll=FALSE, isVerbose=F)
+    EProc$sMDSGapFill(c, FillAll=T)
   }
   
   # run MDS gap fill (REddyProc)
@@ -121,31 +125,44 @@ do_gapfill = function(path_to_file, NEE_name="co2_flux",
 
 example <- function(SiteName){
   SiteName <- "FR-Gri"
-  path <- paste0("C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/data/flux/ICOS/",
-                 SiteName,"/",SiteName,"_full_output_flagged.30mn.csv")
+  cwd <- "C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/data/flux/ICOS/"
+  path <- paste0(cwd, SiteName,"/",SiteName,"_full_output_flagged.30mn.csv")
+  root = paste0("C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/data/flux/ICOS/",
+                SiteName,"/",SiteName)
+  
+  mpath <- ifelse(SiteName=="FR-Fon", paste0(cwd,SiteName,"/ICOSETC_",SiteName,"_METEO_L2.csv"), "")
   
   # meteo <- read_csv("C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/data/flux/ICOS/FR-Fon/ICOSETC_FR-Fon_METEO_L2.csv", 
-                    na = c("NAN", "NA", "NaN", -9999)) %>% 
-    mutate("TIMESTAMP" = as.POSIXct(as.character(TIMESTAMP_END), tryFormat=c("%Y%m%d%H%M"), tz="GMT")) %>% 
-    select(c("TIMESTAMP", "SW_IN", "RH"))
+  #                   na = c("NAN", "NA", "NaN", -9999)) %>% 
+  #   mutate("TIMESTAMP" = as.POSIXct(as.character(TIMESTAMP_END), tryFormat=c("%Y%m%d%H%M"), tz="GMT")) %>% 
+  #   select(c("TIMESTAMP", "SW_IN", "RH"))
+  # rg <- read_csv("C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/data/flux/ICOS/FR-Fon/FR-Fon_Rg.csv", 
+  #                                     na = c("NA", -9999))
+  # plot(as.Date(as.character(ICOSETC_FR_Fon_METEO_L2$TIMESTAMP_START), 
+  #              tryFormat=c("%Y%m%d%H%M")), ICOSETC_FR_Fon_METEO_L2$SW_IN)
   
-  rg <- read_csv("C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/data/flux/ICOS/FR-Fon/FR-Fon_Rg.csv", 
-                                      na = c("NA", -9999))
-  plot(as.Date(as.character(ICOSETC_FR_Fon_METEO_L2$TIMESTAMP_START), 
-               tryFormat=c("%Y%m%d%H%M")), ICOSETC_FR_Fon_METEO_L2$SW_IN)
-  
-  dat_mrf_ec <- do_gapfill(path, NEE_name = "co2_flux", partitioning = "MRF", 
+  do_gapfill(path, mpath, NEE_name = "dwt_wco2_x", partitioning = "MRF",
+             verbosity = 2) %>%
+    write_csv(paste0(root, "_full_gapfill_MRF_DWgapswithSTAandITC.30mn.csv"))
+  break
+  dat_mrf_ec <- do_gapfill(path, mpath, NEE_name = "co2_flux", partitioning = "MRF", 
                            verbosity = 2)
-  dat_tkf_ec <- do_gapfill(path, NEE_name = "co2_flux", partitioning = "TKF", 
+  print("ECS MRF done")
+  dat_tkf_ec <- do_gapfill(path, mpath, NEE_name = "co2_flux", partitioning = "TKF", 
                            verbosity = 2)
-  dat_glf_ec <- do_gapfill(path, NEE_name = "co2_flux", partitioning = "GLF", 
+  print("ECS TKF done")
+  dat_glf_ec <- do_gapfill(path, mpath, NEE_name = "co2_flux", partitioning = "GLF", 
                            verbosity = 2)
-  dat_mrf_dw <- do_gapfill(path, NEE_name = "dwt_wco2_x", partitioning = "MRF", 
+  print("ECS GLF done")
+  dat_mrf_dw <- do_gapfill(path, mpath, NEE_name = "dwt_wco2_x", partitioning = "MRF", 
                            verbosity = 2)
-  dat_tkf_dw <- do_gapfill(path, NEE_name = "dwt_wco2_x", partitioning = "TKF", 
+  print("DW MRF done")
+  dat_tkf_dw <- do_gapfill(path, mpath, NEE_name = "dwt_wco2_x", partitioning = "TKF", 
                            verbosity = 2)
-  dat_glf_dw <- do_gapfill(path, NEE_name = "dwt_wco2_x", partitioning = "GLF", 
+  print("DW TKF done")
+  dat_glf_dw <- do_gapfill(path, mpath, NEE_name = "dwt_wco2_x", partitioning = "GLF", 
                            verbosity = 2)
+  print("DW GLF done")
   
   plot(dat_tkf_ec$TIMESTAMP, dat_tkf_ec$Reco_DT_uStar,
        xlim=c(as.POSIXct("2022/07/11 0000", tz='GMT'), as.POSIXct("2022/07/26 0000", tz='GMT')),
@@ -168,8 +185,6 @@ example <- function(SiteName){
     xlim(as.POSIXct("2021/07/01 0000", tz='GMT'), as.POSIXct("2021/12/01 0000", tz='GMT')) +
     ylim(-5, 40)
   
-  root = paste0("C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/data/flux/ICOS/",
-                SiteName,"/",SiteName)
   write_csv(dat_mrf_ec, paste0(root, "_full_gapfill_MRF_EP.30mn.csv"))
   write_csv(dat_tkf_ec, paste0(root, "_full_gapfill_TKF_EP.30mn.csv"))
   write_csv(dat_glf_ec, paste0(root, "_full_gapfill_GLF_EP.30mn.csv"))

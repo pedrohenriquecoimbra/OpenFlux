@@ -4,6 +4,7 @@ Functions to retrieve Bioclimatology data from sites and put in a standard forma
 
 from functools import reduce
 import os
+import csv
 import ast
 import warnings
 import copy
@@ -75,14 +76,16 @@ class universalCaller(tt.datahandler):
 def first_call(file_date, **kwargs):
     fs = DEFAULT_FIRST_STEP
     fs.update(kwargs)
-    fc = fs["func"]
-    kw = fs["kwargs"]
+    fc = fs.get("func", [])
+    kw = fs.get("kwargs", {})
     try:
         if not callable(fc):
             fc = tt.LazyCallable(*fc).__get__().fc
+            
         kw[fs['date_var']] = file_date if isinstance(
                     file_date, (list, np.ndarray, pd.DatetimeIndex)) else [file_date]
         current_dta = fc(**kw)
+        
     except Exception as e:
         warnings.warn(str(e))
     return current_dta
@@ -166,7 +169,9 @@ def steps_call(cordta, file_date, func, outputpath, fckw={}, overwrite=False, sa
                 #if not os.path.exists(os.path.dirname(outputpath)):
                 #    os.makedirs(os.path.dirname(outputpath), exist_ok=True)
                 tt.mkdirs(outputpath)
-                cordta.to_csv(outputpath, index=False)
+                #cordtasave = copy.deepcopy(cordta)
+                #cordtasave['TIMESTAMP'] = '"' + cordtasave.TIMESTAMP.dt.strftime('%Y-%m-%d %H:%M:%S.%f') + '"'
+                cordta.to_csv(outputpath, index=False, quoting=csv.QUOTE_NONNUMERIC, date_format='%Y-%m-%d %H:%M:%S.%f')
             else:
                 warnings.warn('Warning! ?')
         else:
@@ -243,7 +248,7 @@ def universalcall(file_date, path_output=None, file_name=None,
         if 'cordta' not in locals():
             # move it to -> universalCaller._first_call(file_date, **first_step)
             try:
-                print(file_date, first_step)
+                #print(file_date, first_call, first_step)
                 cordta = first_call(file_date=file_date, **first_step)
                 """
                 if not callable(first_step['fc']):
@@ -260,7 +265,6 @@ def universalcall(file_date, path_output=None, file_name=None,
                     cordta = get_rawdata.open_flux(lookup=[file_date], **first_step['kwargs']).data"""
         
         if cordta is None or cordta.empty:
-            #print('empt')
             warnings.warn(f'{file_date} (Empty)')
             if os.path.exists(curoutpath_inprog): os.remove(curoutpath_inprog)
             return pd.DataFrame() #if i_ is None else {i_: tt.datahandler(pd.DataFrame())}

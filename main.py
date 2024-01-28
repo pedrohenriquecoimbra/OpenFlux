@@ -8,6 +8,7 @@ import pathlib
 import copy
 import scipy as sp
 from functools import reduce
+import itertools
 import importlib.util
 import sys
 import numpy as np
@@ -20,6 +21,30 @@ from __scripts__ import gargantua as gg
 from __scripts__ import common as gt
 from Lib.OpenFlux.scripts import get_data, get_rawdata, wavelet_flux as wc, pre_processing as prep, post_processing as posp, QA_QC, multilevel_decomposition as mld
 from Lib.OpenFlux.scripts.corrections.despike import mauder2013
+
+def df_to_file(self, file_name, *a, **k): 
+    to_functions = {'csv': pd.DataFrame.to_csv,
+                    'xlsx': pd.DataFrame.to_excel,
+                    'txt': pd.DataFrame.to_csv,
+                    'parquet': pd.DataFrame.to_parquet,
+                    'json': pd.DataFrame.to_json}
+    for file_ext, to in to_functions.items():
+        if file_name.endswith(file_ext):
+            return to(self, file_name, *a, **k)   
+    return None
+pd.DataFrame.to_file = df_to_file
+def pd_read_file(file_name, *a, **k):
+    # Total file extensions possible for importing data
+    read_functions = {'csv': pd.read_csv,
+                    'xlsx': pd.read_excel,
+                    'txt': pd.read_csv,
+                    'parquet': pd.read_parquet,
+                    'json': pd.read_json}
+    for file_ext, read in read_functions.items():
+        if file_name.endswith(file_ext):
+            return read(file_name, *a, **k)         
+    return None
+pd.read_file = pd_read_file
 posp.QAQC = QA_QC
 
 pcd = pathlib.Path(__file__).parent.resolve()
@@ -401,11 +426,16 @@ def consolidate_yearly(ymd, path, pattern, output_path, averaging=None):
                     for f in fs:
                         # check if is not an empty file
                         if os.path.getsize(f):
-                            tmp_ = pd.read_csv(f)
+                            tmp_ = pd.read_file(f)
                             datf = pd.concat((datf, tmp_))
                 
-                gt.mkdirs(outp_.format(p, str(y), str(a).zfill(2)))
-                datf.to_csv(outp_.format(p, str(y), str(a).zfill(2)), index=False)
+                output_full_name = outp_.format(p, str(y), str(a).zfill(2))
+                gt.mkdirs(output_full_name)
+                datf.to_file(output_full_name, index=False)
+                #if output_full_name.endswith('.parquet'):
+                #    datf.to_parquet(output_full_name, index=False)
+                #else:
+                #    datf.to_csv(output_full_name, index=False)
 
                 print(os.path.basename(outp_.format(p, y, str(a).zfill(2))), ': Saved.', ' '*15, end='\n', sep='')
                     
@@ -498,9 +528,9 @@ def run_covcs(ymd, varstorun, raw_kwargs, output_path, wt_kwargs={},
 
             # conditional sampling
             φc = [np.array(φ[xy[0]]) * np.array(φ[c]) for c in condsamp]
-            φc = mld.conditional_sampling(Y12, *φc) if φc else {}
-            φs.update({k.replace("xy", ''.join(xy)).replace(
-                'a', ''.join(condsamp)): v for k, v in φc.items()})
+            φc = wc.conditional_sampling(Y12, *φc, names=[''.join(xy)] + [xy[0]+c for c in condsamp]) if φc else {}
+            #φs.update({k.replace("xy", ''.join(xy)).replace('a', ''.join(condsamp)): v for k, v in φc.items()})
+            φs.update(φc)
 
             # repeats nan flag wo/ considering conditional sampling variables
             μs.update(
@@ -540,9 +570,9 @@ def run_covcs(ymd, varstorun, raw_kwargs, output_path, wt_kwargs={},
                                  dat_fluxresult[a])
             
             gt.mkdirs(output_path.format(suffix, str(date), str(a).zfill(2)))
-            dat_fullspectra[a].to_csv(output_path.format(
+            dat_fullspectra[a].to_file(output_path.format(
                 suffix + "_full_cospectra", str(date), str(a).zfill(2)), index=False)
-            dat_fluxresult[a].to_csv(output_path.format(
+            dat_fluxresult[a].to_file(output_path.format(
                 suffix, str(date), str(a).zfill(2)), index=False)
                 
         if os.path.exists(curoutpath_inprog): os.remove(curoutpath_inprog)
@@ -627,11 +657,12 @@ def run_wt(ymd, varstorun, raw_kwargs, output_path, wt_kwargs={},
         # . save in dataframe and .csv
         φ = {}
         μ = {}
+        Cov = {'TIMESTAMP': np.array(data.TIMESTAMP)}
         dat_fullspectra = {a: [] for a in avg_}
         dat_fluxresult = {a: [] for a in avg_}
 
         # run by couple of variables (e.g.: co2*w -> mean(co2'w'))
-        for xy, condsamp in [(v.split('*')[:2], v.split('*')[2:3]) for v in varstorun]:
+        for xy, condsamp in [(v.split('*')[:2], v.split('*')[2:]) for v in varstorun]:
             # run wavelet transform
             for v in xy + condsamp:
                 if v not in φ.keys():
@@ -654,12 +685,14 @@ def run_wt(ymd, varstorun, raw_kwargs, output_path, wt_kwargs={},
                         N = len(X)
                         X = mauder2013(X)
                         Xna = np.isnan(X)
-                        X = np.interp(np.linspace(0, 1, N), 
-                                           np.linspace(0, 1, N)[Xna == False],
-                                  X[Xna==False])
+                        if np.sum(Xna) and Nnan < N:
+                            X = np.interp(np.linspace(0, 1, N), 
+                                            np.linspace(0, 1, N)[Xna == False],
+                                    X[Xna==False])
                         return X 
                     φ[v] = np.apply_along_axis(__despike__, 1, φ[v])
                     μ[v] = signan *1
+            Cov['cov_'+''.join(xy)] = (data[xy[0]] - np.nanmean(data[xy[0]])) * (data[xy[1]] - np.nanmean(data[xy[1]]))
 
             # calculate covariance
             Y12 = np.array(φ[xy[0]]) * np.array(φ[xy[1]]).conjugate() * Cφ
@@ -669,10 +702,11 @@ def run_wt(ymd, varstorun, raw_kwargs, output_path, wt_kwargs={},
                 np.array(μ[xy[0]]), 0, 1) * np.where(np.array(μ[xy[1]]), 0, 1), 0, 1)}
 
             # conditional sampling
+            names = [''.join(xy)] + [xy[0]+c for c in condsamp]
             φc = [np.array(φ[xy[0]]) * np.array(φ[c]).conjugate() for c in condsamp]
-            φc = mld.conditional_sampling(Y12, *φc) if φc else {}
-            φs.update({k.replace("xy", ''.join(xy)).replace(
-                'a', ''.join(condsamp)): v for k, v in φc.items()})
+            φc = wc.conditional_sampling(Y12, *φc, names=names) if φc else {}
+            #φs.update({k.replace("xy", ''.join(xy)).replace('a', ''.join(condsamp)): v for k, v in φc.items()})
+            φs.update(φc)
 
             # repeats nan flag wo/ considering conditional sampling variables
             μs.update(
@@ -690,6 +724,7 @@ def run_wt(ymd, varstorun, raw_kwargs, output_path, wt_kwargs={},
 
             __temp__ = reduce(lambda left, right: pd.merge(left, right[['TIMESTAMP'] + list(right.columns.difference(left.columns))], on="TIMESTAMP", how="outer"),
                               [__arr2dataframe__(Y, μs[n], prefix=n) for n, Y in φs.items()])
+            #[pd.DataFrame(Cov)] +
             
             for a in avg_:
                 __tempa__ = copy.deepcopy(__temp__)
@@ -699,27 +734,36 @@ def run_wt(ymd, varstorun, raw_kwargs, output_path, wt_kwargs={},
 
                 maincols = ["TIMESTAMP", ''.join(xy)]
                 if φc:
-                    for c in ['++', '+-', '--', '-+']:
-                        maincols += [''.join(xy) + c + ''.join(condsamp)]
-                        __tempa__.insert(1, ''.join(xy) + c + ''.join(condsamp), np.sum(__tempa__[[
-                            "{}_{}".format(''.join(xy) + c + ''.join(condsamp), l) for l in sj if dt*2**l < integrating]], axis=1))
+                    #maincols += [names[0] + c + names[1] for c in ['++', '+-', '--', '-+']]
+                    sign_label = {1: "+", -1: "-"}
+                    for co in set(itertools.combinations([1, -1]*len(names), len(names))):
+                        #for c in ['++', '+-', '--', '-+']:
+                        sign = ''.join([sign_label[c] for c in co])
+                        name = names[0] + sign[:2] + names[1] + ''.join([s + names[2+i]  for i, s in enumerate(sign[2:])])
+                        __tempa__.insert(1, name, np.sum(__tempa__[[
+                            f"{name}_{l}" for l in sj if dt*2**l < integrating]], axis=1))
                 __tempa__.insert(1, ''.join(xy), np.sum(__tempa__[[
                     "{}_{}".format(''.join(xy), l) for l in sj if dt*2**l < integrating]], axis=1))
-
+                       
                 dat_fullspectra[a] += [__tempa__]
                 dat_fluxresult[a] += [__tempa__[maincols]]
                 del __tempa__
         
         for a in avg_:
-            dat_fullspectra[a] = reduce(lambda left, right: pd.merge(left, right, on="TIMESTAMP", how="outer"),
+            dat_fullspectra[a] = reduce(lambda left, right: pd.merge(left, right, on="TIMESTAMP", how="outer", suffixes=('', '_DUP')),
                                  dat_fullspectra[a])
-            dat_fluxresult[a] = reduce(lambda left, right: pd.merge(left, right, on="TIMESTAMP", how="outer"),
+            dat_fluxresult[a] = reduce(lambda left, right: pd.merge(left, right, on="TIMESTAMP", how="outer", suffixes=('', '_DUP')),
                                  dat_fluxresult[a])
             
+            #import awswrangler
+            #haua = copy.deepcopy(dat_fullspectra[a])
+            #print(haua.columns[awswrangler.catalog.sanitize_dataframe_columns_names(df=haua).columns.duplicated()])
+            #print(awswrangler.catalog.sanitize_dataframe_columns_names(df=haua).columns[awswrangler.catalog.sanitize_dataframe_columns_names(df=haua).columns.duplicated()])
+            
             gt.mkdirs(output_path.format(suffix, str(date), str(a).zfill(2)))
-            dat_fullspectra[a].to_csv(output_path.format(
+            dat_fullspectra[a].to_file(output_path.format(
                 suffix + "_full_cospectra", str(date), str(a).zfill(2)), index=False)
-            dat_fluxresult[a].to_csv(output_path.format(
+            dat_fluxresult[a].to_file(output_path.format(
                 suffix, str(date), str(a).zfill(2)), index=False)
                 
         if os.path.exists(curoutpath_inprog): os.remove(curoutpath_inprog)
@@ -797,7 +841,7 @@ def run_dwt(ymd, varstorun, raw_kwargs, output_path, dwv_kwargs={}, averaging=[3
         dat_fluxresult = {a: [] for a in avg_}
 
         # run by couple of variables (e.g.: co2*w -> mean(co2'w'))
-        for xy, condsamp in [(v.split('*')[:2], v.split('*')[2:3]) for v in varstorun]:
+        for xy, condsamp in [(v.split('*')[:2], v.split('*')[2:]) for v in varstorun]:
             Xs = []
             Xnas = []
             for xy_ in xy:
@@ -816,32 +860,55 @@ def run_dwt(ymd, varstorun, raw_kwargs, output_path, dwv_kwargs={}, averaging=[3
             Y12 = Y1 * Y2.conjugate()
             Ys = {''.join(xy): Y12}
 
-            Xcs = []
-            for cs_ in condsamp:
+            def multicondition_sample(fluxes=Ys, mother=Y12, left=Y1, condition_by=condsamp, prefix=''.join(xy)):
+                #Xcs = []
+                #Ycs = {}
+                if condition_by == []: return fluxes
+                cs_ = condition_by.pop(0)
+                if cs_ not in df.columns: return multicondition_sample(fluxes, mother, left, condition_by, prefix)
                 X = df[cs_]  # .interpolate(limit_direction="both")
                 Xna = np.isnan(X)
                 X = np.interp(np.linspace(0, 1, len(X)),
                               np.linspace(0, 1, len(X))[Xna == False],
                               X[Xna == False])
-                Xcs += [X - np.mean(X)]
-            if len(Xcs)==2:
-                [Xc1, Xc2], level = mld.decompose(*Xcs, **dwv_kwargs)
-            elif len(Xcs) == 1:
-                [Xc2], level = mld.decompose(*Xcs, **dwv_kwargs)
-                Xc1 = Y1
-            if Xcs:
-                Xc12 = Xc1 * Xc2.conjugate()
-            
-            Ycs = mld.conditional_sampling(Y12, Xc12) if Xcs else {}
-            nnames = {}
-            for k in Ycs.keys():
-                nname = str(k)
-                for i, cs_ in enumerate(condsamp):
+                #Xcs.append(X)# += [X - np.mean(X)]
+                
+                [Xc2], level = mld.decompose(X, **dwv_kwargs)
+                Xc12 = left * Xc2.conjugate()
+                Ycs = wc.conditional_sampling(mother, Xc12, names=[prefix, cs_])
+
+                """
+                for Xc in Xcs:
+                if len(Xcs)==2:
+                    [Xc1, Xc2], level = mld.decompose(*Xcs, **dwv_kwargs)
+                elif len(Xcs) == 1:
+                    [Xc2], level = mld.decompose(*Xcs, **dwv_kwargs)
+                    Xc1 = Y1
+                if Xcs:
+                    Xc12 = Xc1 * Xc2.conjugate()
+                Ycs = mld.conditional_sampling(Y12, Xc12) if Xcs else {}
+                
+
+                nnames = {}
+                for k in Ycs.keys():
+                    nname = str(k)
+                    i = 0
+                    #for i, cs_ in enumerate([condsamp]):
                     nname = nname.replace(f"x{i}", cs_)
-                nnames[k] = nname
-            for old, new in nnames.items():
-                Ycs[new] = Ycs.pop(old)
-            Ys.update({k.replace("xy", ''.join(xy)).replace('a', ''.join(condsamp)): v for k, v in Ycs.items()})
+                    nnames[k] = nname
+                for old, new in nnames.items():
+                    Ycs[new] = Ycs.pop(old)
+                """
+                #cs_ <- ''.join(condsamp)
+                #fluxes.update({k.replace("xy", prefix).replace('a', xy[0]+cs_): v for k, v in Ycs.items()})
+                fluxes.update(Ycs.items())
+                
+                fluxes_variables = list(fluxes.keys())
+                for k in fluxes_variables:
+                    fluxes.update(multicondition_sample(fluxes, fluxes[k], condition_by=condition_by, prefix=k))
+                return fluxes
+            
+            Ys = multicondition_sample()
 
             # ARRAY TO DATAFRAME THEN AVG
             def __arr2dataframe__(Y, prefix=''.join(xy), id=np.array(df.TIMESTAMP)):
@@ -860,6 +927,8 @@ def run_dwt(ymd, varstorun, raw_kwargs, output_path, dwv_kwargs={}, averaging=[3
                 __tempa__["TIMESTAMP"] = pd.to_datetime(np.array(__tempa__.TIMESTAMP)).ceil(
                     str(a)+'Min')
                 __tempa__ = __tempa__.groupby("TIMESTAMP").agg(np.nanmean).reset_index()
+                dat_fullspectra[a] += [__tempa__]
+                """
                 #__tempcond = (nan_tolerance < 1 and np.array(__tempa__["qc"]) > nan_tolerance) + (np.array(__tempa__["qc"]) > (nan_tolerance * len(__tempa__) / len(__temp__)))
                 #__tempa__.loc[__tempcond>0, [c for c in __tempa__.columns if c != "TIMESTAMP"]] = np.nan
 
@@ -874,16 +943,17 @@ def run_dwt(ymd, varstorun, raw_kwargs, output_path, dwv_kwargs={}, averaging=[3
                 cs_ = [''.join(xy) + c + ''.join(condsamp) for c in ['++','+-', '--','-+']] if Xcs else []
                 dat_fluxresult[a] += [__tempa__[["TIMESTAMP", ''.join(xy)] + cs_]]
                 del __tempa__  # , __tempcond
+                """
         
         for a in avg_:
             dat_fullspectra[a] = reduce(lambda left, right: pd.merge(left, right, on="TIMESTAMP", how="outer"),
                                  dat_fullspectra[a])
-            dat_fluxresult[a] = reduce(lambda left, right: pd.merge(left, right, on="TIMESTAMP", how="outer"),
-                                 dat_fluxresult[a])
+            #dat_fluxresult[a] = reduce(lambda left, right: pd.merge(left, right, on="TIMESTAMP", how="outer"),
+            #                     dat_fluxresult[a])
             
             gt.mkdirs(output_path.format(suffix, str(y), str(a).zfill(2)))
-            dat_fullspectra[a].to_csv(output_path.format(suffix + "_full_cospectra", str(y), str(a).zfill(2)), index=False)
-            dat_fluxresult[a].to_csv(output_path.format(suffix, str(y), str(a).zfill(2)), index=False)
+            dat_fullspectra[a].to_file(output_path.format(suffix + "_full_cospectra", str(y), str(a).zfill(2)), index=False)
+            #dat_fluxresult[a].to_csv(output_path.format(suffix, str(y), str(a).zfill(2)), index=False)
                 
         if os.path.exists(curoutpath_inprog): os.remove(curoutpath_inprog)
         if verbosity: print(y, len(yl), f'{int(100*i/len(ymd))} %', end='\n')
@@ -1062,8 +1132,8 @@ def run_cwt(ymd, varstorun, output_path, pathtoraw,
                                  dat_fluxresult[a])
             
             gt.mkdirs(output_path.format(suffix, date, str(a).zfill(2)))
-            dat_fullspectra[a].to_csv(output_path.format(suffix + "_full_cospectra", date, str(a).zfill(2)), index=False)
-            dat_fluxresult[a].to_csv(output_path.format(suffix, date, str(a).zfill(2)), index=False)
+            dat_fullspectra[a].to_file(output_path.format(suffix + "_full_cospectra", date, str(a).zfill(2)), index=False)
+            dat_fluxresult[a].to_file(output_path.format(suffix, date, str(a).zfill(2)), index=False)
 
         if os.path.exists(curoutpath_inprog): os.remove(curoutpath_inprog)
         if verbosity: print(date, f'{int(100*i/len(todo))} %', len(todo), end='\n')
@@ -1216,7 +1286,7 @@ def DEPRECATED_consolidate_wavelets(ymd, path, output_path, filefreq="30min", av
                 v = [a, p, y][-l:]
                 
                 gt.mkdirs(output_path.format(*v))
-                wv_datf.to_csv(output_path.format(*v), index=False)
+                wv_datf.to_file(output_path.format(*v), index=False)
                 """
                     #[print(path.format(v.replace('_', ''), d.strftime('%Y%m%d%H%M'))) for v in varstorun]
                     t_0 = {v: gt.datahandler.load(path.format(v.replace('*', ''), d.strftime('%Y%m%d%H%M'))) for v in varstorun}

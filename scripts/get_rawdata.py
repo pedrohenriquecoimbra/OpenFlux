@@ -220,7 +220,26 @@ def _open_flux(path, date_format='%Y%m%d%H%M', dt=0.05, tname="TIMESTAMP", id=No
 
 
 def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1, fkwargs={}, tipfile="readme.txt", **kwargs):
-    df_site = pd.DataFrame()
+    df_site = []#pd.DataFrame()
+    from itertools import chain
+    if isinstance(path, dict):
+        dataframes = {}
+        for k, v in path.items():
+            assert isinstance(v, str), f'Path ({v}) is not string.'
+            path_ = open_flux(v, lookup, fill, fmt, onlynumeric, verbosity, fkwargs, tipfile, **kwargs)
+            dt = path_.dt
+            dataframes[k] = path_.data
+        #df_site = dataframes.pop(k, pd.DataFrame())
+        dup_keys = {}
+        for k in dataframes.keys():
+            dup_keys[k] = [set(dataframes[k].columns).intersection(set(v_.columns)) - set(['TIMESTAMP']) for k_, v_ in dataframes.items() if k_!=k]
+            dup_keys[k] = list(chain.from_iterable(dup_keys[k]))
+            dataframes[k].rename(columns={c: c + k for c in dup_keys[k]}, inplace=True)
+        df_site = reduce(lambda left, right: pd.merge(left, right, on='TIMESTAMP', how='outer', suffixes=('', '_DUP')), 
+                         dataframes.values())
+        #for k, v in dataframes.items():
+        #    df_site = df_site.merge(v, on='TIMESTAMP', how='outer', suffixes=('', k))
+        return FluxTowerRawData(df_site, dt=dt)
     
     folders = [path + p + '/' for p in os.listdir(path) if os.path.isdir(path + p)]
     folders = folders if folders else [path]
@@ -229,11 +248,10 @@ def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1
         df_td = pd.DataFrame()
 
         # read tips file        
-        kw_ = tt.update_nested_dicts({"FILE_RAW": DEFAULT_FILE_RAW, "READ_CSV": DEFAULT_READ_CSV, "FMT_DATA": DEFAULT_FMT_DATA}, 
-                                              os.path.join(path, tipfile), os.path.join(path_, tipfile),
-                                              {"FILE_RAW": fkwargs, "READ_CSV": kwargs, "FMT_DATA": fmt},
-                                              fstr=lambda d: tt.readable_file(d).safe_load().to_dict())
-                                              
+        kw_ = tt.update_nested_dicts({"FILE_RAW": DEFAULT_FILE_RAW, "READ_CSV": DEFAULT_READ_CSV, "FMT_DATA": DEFAULT_FMT_DATA},
+                                     os.path.join(path, tipfile), os.path.join(path_, tipfile),
+                                     {"FILE_RAW": fkwargs, "READ_CSV": kwargs, "FMT_DATA": fmt},
+                                     fstr=lambda d: tt.readable_file(d).safe_load().to_dict())
         kw = tt.metadata(**kw_['FILE_RAW'])
         kw_csv = kw_['READ_CSV']
         
@@ -251,13 +269,14 @@ def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1
                 dateparts = re.findall(kw.file_pattern, name, flags=re.IGNORECASE)
                 if len(dateparts) == 1:
                     files_list[dateparts[0]] = os.path.join(root, name)
-                    
+        
         for td in set(lookup_) & files_list.keys() if lookup_ != [] else files_list.keys():
             path_to_tdfile = files_list[td]
             if os.path.exists(path_to_tdfile):
                 if path_to_tdfile.endswith('.gz'): kw_csv.update(**{'compression': 'gzip'})
                 elif path_to_tdfile.endswith('.csv'): kw_csv.pop('compression', None)
                 if path_to_tdfile.endswith('.ghg'):
+                    kw_csv.pop('compression', None)
                     with zipfile.ZipFile(path_to_tdfile, 'r') as zip_ref:
                         datafile = [zip_ref.read(name) for name in zip_ref.namelist() if name.endswith(".data")][0]
                     datafile = str(datafile, 'utf-8')
@@ -274,7 +293,7 @@ def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1
                         if verbosity>1: warnings.warn(f'{e}, when opening {path_to_tdfile}, using {kw_csv}. Re-trying using python as engine and ignoring bad lines.')
                         df_td = pd.read_csv(path_to_tdfile, on_bad_lines='warn', engine='python', **kw_csv)
                     except Exception as ee:
-                        warnings.warn(f'{ee}, when opening {str(path_to_tdfile)}, using {kw_csv}')
+                        if verbosity: warnings.warn(f'{ee}, when opening {str(path_to_tdfile)}, using {kw_csv}')
                         continue
                 
                 """
@@ -290,9 +309,17 @@ def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1
                     df_td = df_td.rename({kw.tname: kw.tname+'_orig'})
                 
                 if kw.tname not in df_td.columns or kw.datefomatfrom == 'drop':
-                    if "date" in df_td.columns and "time" in df_td.columns:
+                    check_dttm = {c.lower(): c for c in df_td.columns if c.lower() in ['date', 'time']}
+                    check_ymdhm = {c.lower(): c for c in df_td.columns if c.lower() in ['year', 'month', 'day', 'hour', 'minute', 'second']}
+                    if len(check_ymdhm) == 6 and len(check_dttm) != 2:
+                        df_td['date'] = df_td[check_dttm['year']] + "-" + df_td[check_dttm['month']] + "-" + df_td[check_dttm['day']]
+                        df_td['time'] = df_td[check_dttm['hour']] + ":" + df_td[check_dttm['minute']] + ":" + df_td[check_dttm['second']]
+                        check_dttm = {'date':'date', 'time': 'time'}
+                    possib_fmt = {1: '%Y-%m-%d %H:%M', 2: '%Y-%m-%d %H:%M:%S', 3: '%Y-%m-%d %H:%M:%S:%f'}
+                    if len(check_dttm) == 2:
+                        #"date" in df_td.columns and "time" in df_td.columns:
                         df_td[kw.tname] = pd.to_datetime(
-                            df_td.date + " " + df_td.time, format='%Y-%m-%d %H:%M')
+                            df_td[check_dttm['date']] + " " + df_td[check_dttm['time']], format=possib_fmt[df_td[check_dttm['time']][0].count(':')])
                     else:
                         df_td[kw.tname] = pd.to_datetime(
                             td, format=kw.date_format) - datetime.timedelta(seconds=kw.dt) * (len(df_td)-1 + -1*df_td.index)
@@ -324,16 +351,21 @@ def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1
                             #pd.to_datetime(df_td[kw.tname]).strftime(kw.datefomatto)
                         # df_td[kw.tname] = pd.to_datetime(df_td[kw.tname], format=kw.datefomatfrom).dt.strftime(kw.datefomatto)
                     except:
-                        warnings.warn(f'error when converting {kw.tname} from {kw.datefomatfrom} to {kw.datefomatto}.')
+                        if verbosity: warnings.warn(f'error when converting {kw.tname} from {kw.datefomatfrom} to {kw.datefomatto}.')
                         continue
                 
                 df_td['file'] = td
-                #df_site = df_site.append(df_td)
-                df_site = pd.concat([df_site, df_td], ignore_index=True).reset_index(drop=True)
+                df_td = FluxTowerRawData.format(df_td, **kw_['FMT_DATA'])
+                if df_td is not None: df_site.append(df_td)
+                #df_site = pd.concat([df_site, df_td], ignore_index=True).reset_index(drop=True)
         
         if df_td.empty == False:
             break
-        
+    
+    if df_site:
+        df_site = pd.concat(df_site, ignore_index=True).reset_index(drop=True)
+    else: df_site = pd.DataFrame()
+
     #print('df_td.empty ', df_td.empty)
     if onlynumeric:
         valcols = [i for i in df_site.columns if i.lower() not in [kw.tname.lower(), 'file']]
@@ -348,15 +380,13 @@ def open_flux(path, lookup=[], fill=False, fmt={}, onlynumeric=True, verbosity=1
                     _nonnum = [s for s in np.unique(df_site[k].apply(lambda s: str(s) if re.findall('[A-z/]+', str(s)) else '')) if s]
                     _bfaf += ['{}, changed from {} to {}. ({})'.format(k, b, _af[k], ', '.join(_nonnum) if _nonnum else 'All numeric')]
             if _bfaf:
-                warnings.warn(', '.join(_bfaf))
+                if verbosity: warnings.warn(', '.join(_bfaf))
     """
     kw_fmt = DEFAULT_FMT_DATA
     kw_fmt = update_dict_using_readable_file(kw_fmt, os.path.join(path, tipfile), ['FMT_DATA'])
     kw_fmt = update_dict_using_readable_file(kw_fmt, os.path.join(path_, tipfile), ['FMT_DATA'])
     kw_fmt.update(fmt)
     """
-    #if kw_fmt:
-    df_site = FluxTowerRawData.format(df_site, **kw_['FMT_DATA'])
 
     if fill:
         if lookup:

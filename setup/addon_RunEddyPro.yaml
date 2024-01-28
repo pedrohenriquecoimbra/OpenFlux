@@ -1,0 +1,33 @@
+RunEddyPro:
+  __init__:
+    <CORR>: <SCRIPTS>/corrections/
+    <pSTEPS>: <SCRIPTS>/raw_data_step_callers/
+    function: call_loop
+    path: <SCRIPTS>/pre_processing.py
+  file_name: <SITE>_raw_dataset_{}.csv
+  first_step:
+    kwargs:
+      onlynumeric: true
+      path: <MOTHER>/input/EC/
+      verbosity: true
+  multiprocess: 1
+  path_output: <MOTHER>/output/raw_datasets/
+  popup: false
+  result: false
+  steps:
+    resample:
+      func:
+      - C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/gargantua/Lib/public/resample_PICARRO.py
+      - resample
+      kwargs:
+        path: C:/Users/phherigcoimb/OneDrive/INRAe/thesis-project-1/data/flux/ROV.SAC.raw/SAC_100m_air.rdf.sep2023.
+      name: resample
+      overwrite: false
+      save: true
+  steps_order:
+  - resample
+  verbos: true
+  ymd:
+  - <TIME_BEGIN>
+  - <TIME_END>
+  - 30min

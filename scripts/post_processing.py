@@ -190,7 +190,8 @@ def flag_dataset(ymd, path, prefix, output_path, postfix="_flagged", overwrite=F
     _dta30 = reduce(lambda left, right: pd.concat((left, right), axis=0), [
         pd.read_csv(filepath.format(y, '30')) for y in ymd if os.path.exists(filepath.format(y, '30'))])
     _dta30['TIMESTAMP'] = pd.to_datetime(_dta30.TIMESTAMP)
-    _dta30 = pd.merge(_dta30, fluxResult[['TIMESTAMP', 'zm', 'z0']], how='left', on='TIMESTAMP')
+    if 'zm' not in _dta30.columns: _dta30 = pd.merge(_dta30, fluxResult[['TIMESTAMP', 'zm']], how='left', on='TIMESTAMP')
+    if 'z0' not in _dta30.columns: _dta30 = pd.merge(_dta30, fluxResult[['TIMESTAMP', 'z0']], how='left', on='TIMESTAMP')
     #_dta30['zm'] = 2#37
     #_dta30['z0'] = 0.02#18.76
 

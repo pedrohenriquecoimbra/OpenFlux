@@ -1,0 +1,665 @@
+__init__:
+  <LATITUDE>:
+    help: ''
+    type: float
+  <LONGITUDE>:
+    help: ''
+    type: float
+  <MOTHER>:
+    help: ''
+    type: str
+  <PROJECT>:
+    help: ''
+    type: str
+  <RAWPATH>:
+    help: ''
+    type: str
+  <SCRIPTS>:
+    help: ''
+    type: str
+  <SITE>:
+    help: ''
+    type: str
+  <TIME_BEGIN>:
+    help: ''
+    type: int
+  <TIME_END>:
+    help: ''
+    type: int
+  <UNC_RAW>:
+    help: ''
+    type: str
+  main:
+    help: ''
+    type: str
+  ntprocess:
+    help: ''
+    type: int
+  ntthreads:
+    help: ''
+    type: int
+__routine__:
+  ymd:
+    help: ''
+    type: list
+RawCorrections:
+  __init__:
+    <CORR>:
+      help: ''
+      type: str
+    <pSTEPS>:
+      help: ''
+      type: str
+    function:
+      help: ''
+      type: str
+    path:
+      help: ''
+      type: str
+  file_name:
+    help: ''
+    type: str
+  first_step:
+    kwargs:
+      fmt:
+        addkeep:
+          help: ''
+          type: list
+        cut:
+          help: ''
+          type: bool
+      onlynumeric:
+        help: ''
+        type: bool
+      path:
+        help: ''
+        type: str
+      verbosity:
+        help: ''
+        type: bool
+  multiprocess:
+    help: ''
+    type: int
+  path_output:
+    help: ''
+    type: str
+  popup:
+    help: ''
+    type: bool
+  result:
+    help: ''
+    type: bool
+  steps:
+    changing units:
+      ds:
+        help: ''
+        type: str
+      func:
+        help: ''
+        type: list
+      kwargs:
+        Xgas:
+          co2:
+            help: ''
+            type: str
+        drop:
+          help: ''
+          type: bool
+      name:
+        help: ''
+        type: str
+      overwrite:
+        help: ''
+        type: bool
+      save:
+        help: ''
+        type: bool
+    despike:
+      ds:
+        help: ''
+        type: str
+      func:
+        help: ''
+        type: list
+      name:
+        help: ''
+        type: str
+      save:
+        help: ''
+        type: bool
+    fill:
+      ds:
+        help: ''
+        type: str
+      func:
+        help: ''
+        type: list
+      name:
+        help: ''
+        type: str
+      overwrite:
+        help: ''
+        type: bool
+      save:
+        help: ''
+        type: bool
+    tilt_axis:
+      ds:
+        help: ''
+        type: str
+      func:
+        help: ''
+        type: list
+      kwargs:
+        __text__:
+          co_site:
+            help: ''
+            type: str
+          compaign:
+            help: ''
+            type: str
+          mother_folder:
+            help: ''
+            type: str
+        method:
+          help: ''
+          type: str
+        save:
+          help: ''
+          type: bool
+        setup_name:
+          help: ''
+          type: str
+        setup_path:
+          help: ''
+          type: str
+      name:
+        help: ''
+        type: str
+    time_lag:
+      default_lag:
+        help: ''
+        type: int
+      ds:
+        help: ''
+        type: str
+      func:
+        help: ''
+        type: list
+      name:
+        help: ''
+        type: str
+      overwrite:
+        help: ''
+        type: bool
+      save:
+        help: ''
+        type: bool
+      skip:
+        help: ''
+        type: bool
+  steps_order:
+    help: ''
+    type: list
+  verbos:
+    help: ''
+    type: bool
+  ymd:
+    help: ''
+    type: list
+RunEddyPro:
+  __init__:
+    <CORR>:
+      help: ''
+      type: str
+    <pSTEPS>:
+      help: ''
+      type: str
+    function:
+      help: ''
+      type: str
+    path:
+      help: ''
+      type: str
+  file_name:
+    help: ''
+    type: str
+  first_step:
+    kwargs:
+      onlynumeric:
+        help: ''
+        type: bool
+      path:
+        help: ''
+        type: str
+      verbosity:
+        help: ''
+        type: bool
+  multiprocess:
+    help: ''
+    type: int
+  path_output:
+    help: ''
+    type: str
+  popup:
+    help: ''
+    type: bool
+  result:
+    help: ''
+    type: bool
+  steps:
+    resample:
+      func:
+        help: ''
+        type: list
+      kwargs:
+        path:
+          help: ''
+          type: str
+        rawpath:
+          help: ''
+          type: str
+      name:
+        help: ''
+        type: str
+      overwrite:
+        help: ''
+        type: bool
+      save:
+        help: ''
+        type: bool
+  steps_order:
+    help: ''
+    type: list
+  verbos:
+    help: ''
+    type: bool
+  ymd:
+    help: ''
+    type: list
+run_bioclimatology:
+  averaging:
+    help: ''
+    type: list
+  output_path:
+    help: ''
+    type: str
+  overwrite:
+    help: ''
+    type: bool
+  raw_kwargs:
+    file_pattern:
+      help: ''
+      type: str
+    jlcsv:
+      log:
+        help: ''
+        type: str
+    mother_path:
+      help: ''
+      type: str
+  ymd:
+    help: ''
+    type: list
+run_eddycovariance:
+  averaging:
+    help: ''
+    type: list
+  output_path:
+    help: ''
+    type: str
+  raw_kwargs:
+    file_pattern:
+      help: ''
+      type: str
+    jlcsv:
+      acqrt:
+        help: ''
+        type: int
+      dateform:
+        help: ''
+        type: str
+      delim:
+        help: ''
+        type: str
+      header:
+        help: ''
+        type: int
+    multiprocess:
+      help: ''
+      type: int
+    path:
+      help: ''
+      type: str
+  unc_kwargs:
+    file_pattern:
+      help: ''
+      type: str
+    jlcsv:
+      acqrt:
+        help: ''
+        type: int
+      dateform:
+        help: ''
+        type: str
+      delim:
+        help: ''
+        type: str
+      header:
+        help: ''
+        type: int
+    multiprocess:
+      help: ''
+      type: int
+    path:
+      help: ''
+      type: str
+  ymd:
+    help: ''
+    type: list
+run_uncertainty:
+  averaging:
+    help: ''
+    type: list
+  output_path:
+    help: ''
+    type: str
+  raw_kwargs:
+    file_pattern:
+      help: ''
+      type: str
+    jlcsv:
+      acqrt:
+        help: ''
+        type: int
+      dateform:
+        help: ''
+        type: str
+      delim:
+        help: ''
+        type: str
+      header:
+        help: ''
+        type: int
+    multiprocess:
+      help: ''
+      type: int
+    path:
+      help: ''
+      type: str
+  ymd:
+    help: ''
+    type: list
+run_dwt:
+  averaging:
+    help: ''
+    type: list
+  output_path:
+    help: ''
+    type: str
+  raw_kwargs:
+    path:
+      help: ''
+      type: str
+  varstorun:
+    help: ''
+    type: list
+  ymd:
+    help: ''
+    type: list
+run_cdwt:
+  __init__:
+    function:
+      help: ''
+      type: str
+  averaging:
+    help: ''
+    type: list
+  output_path:
+    help: ''
+    type: str
+  raw_kwargs:
+    path:
+      help: ''
+      type: str
+  varstorun:
+    help: ''
+    type: list
+  ymd:
+    help: ''
+    type: list
+run_cwt:
+  method:
+    help: ''
+    type: str
+  nthreads:
+    help: ''
+    type: int
+  output_path:
+    help: ''
+    type: str
+  overwrite:
+    help: ''
+    type: bool
+  pathtoraw:
+    help: ''
+    type: str
+  varstorun:
+    help: ''
+    type: list
+  ymd:
+    help: ''
+    type: list
+run_crosswavelets:
+  all_freqs:
+    help: ''
+    type: bool
+  fkwargs:
+    datefomatfrom:
+      help: ''
+      type: str
+  output_path:
+    help: ''
+    type: str
+  overwrite:
+    help: ''
+    type: bool
+  period:
+    help: ''
+    type: int
+  prefix:
+    help: ''
+    type: str
+  prepare_kwargs:
+    max_period:
+      help: ''
+      type: int
+    path:
+      help: ''
+      type: str
+  varstorun:
+    help: ''
+    type: list
+  wv_kwargs:
+    dj:
+      help: ''
+      type: float
+    dt:
+      help: ''
+      type: float
+    mother:
+      help: ''
+      type: str
+  ymd:
+    help: ''
+    type: list
+yearlyEC:
+  __init__:
+    <M>:
+      help: ''
+      type: str
+    <S>:
+      help: ''
+      type: str
+    function:
+      help: ''
+      type: str
+  output_path:
+    help: ''
+    type: str
+  path:
+    help: ''
+    type: str
+  pattern:
+    help: ''
+    type: str
+  ymd:
+    help: ''
+    type: list
+yearlyDWT:
+  __init__:
+    <M>:
+      help: ''
+      type: str
+    <S>:
+      help: ''
+      type: str
+    function:
+      help: ''
+      type: str
+  output_path:
+    help: ''
+    type: str
+  path:
+    help: ''
+    type: str
+  pattern:
+    help: ''
+    type: str
+  ymd:
+    help: ''
+    type: list
+yearlyCWT:
+  __init__:
+    <M>:
+      help: ''
+      type: str
+    <S>:
+      help: ''
+      type: str
+    function:
+      help: ''
+      type: str
+  output_path:
+    help: ''
+    type: str
+  path:
+    help: ''
+    type: str
+  pattern:
+    help: ''
+    type: str
+  ymd:
+    help: ''
+    type: list
+unify_dataset:
+  include:
+    BM:
+      help: ''
+      type: list
+    CDWT:
+      help: ''
+      type: list
+    CWT:
+      help: ''
+      type: list
+    DWT:
+      help: ''
+      type: list
+    EC:
+      help: ''
+      type: list
+    ECunc:
+      help: ''
+      type: list
+  output_path:
+    help: ''
+    type: str
+  path:
+    help: ''
+    type: str
+  prefix:
+    help: ''
+    type: str
+  ymd:
+    help: ''
+    type: list
+flag_dataset:
+  output_path:
+    help: ''
+    type: str
+  path:
+    help: ''
+    type: str
+  prefix:
+    help: ''
+    type: str
+  ymd:
+    help: ''
+    type: list
+gap_filling:
+  __init__:
+    <P>:
+      help: ''
+      type: str
+  cols:
+    CWT:
+      flag:
+        flag(w):
+          help: ''
+          type: int
+      var:
+        help: ''
+        type: str
+    DWT:
+      flag:
+        flag(w):
+          help: ''
+          type: int
+      var:
+        help: ''
+        type: str
+    EC:
+      flag:
+        flag(w):
+          help: ''
+          type: int
+        flag(w/co2):
+          help: ''
+          type: int
+      var:
+        help: ''
+        type: str
+    EP:
+      flag:
+        flag(w):
+          help: ''
+          type: int
+        flag(w/co2):
+          help: ''
+          type: int
+      var:
+        help: ''
+        type: str
+  latitude:
+    help: ''
+    type: str
+  longitude:
+    help: ''
+    type: str
+  output_path:
+    help: ''
+    type: str
+  path:
+    help: ''
+    type: str

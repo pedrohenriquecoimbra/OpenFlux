@@ -256,8 +256,11 @@ def matrixtotimetable(time, mat, c0name="TIMESTAMP", **kwargs):
     return __temp__
 
 
-def conditional_sampling(Y12, *args, level=None, wave="db6", false=0):
+def conditional_sampling(Y12, *args, level=None, wave="db6", names=['xy', 'a'], false=0):
     nargs = len(args) + 1
+    if nargs < len(names): names = names[:nargs]
+    if nargs > len(names): names = names + ['b']* len(names)-nargs
+
     YS = [Y12] + list(args)
     #YS, _ = decompose(*args, level=level, wave=wave)
     #Yi = {}
@@ -265,7 +268,8 @@ def conditional_sampling(Y12, *args, level=None, wave="db6", false=0):
     label = {1: "+", -1: "-"}
 
     for co in set(itertools.combinations([1, -1]*nargs, nargs)):
-        name = 'xy{}a'.format(''.join([label[c] for c in co]))
+        sign = ''.join([label[c] for c in co])
+        name = names[0] + sign[:2] + names[1] + ''.join([s + names[2+i]  for i, s in enumerate(sign[2:])])
         Ys[name] = Y12
         for i, c in enumerate(co):
             xy = 1 * (c*YS[i] >= 0)
@@ -280,7 +284,7 @@ def universal_wt(signal, method, fs=20, f0=1/(3*60*60), f1=10, fn=100,
     assert method in [
         'dwt', 'cwt', 'fcwt'], "Method not found. Available methods are: dwt, cwt, fcwt"
     if method== "dwt":
-        lvl = kwargs.get('level', int(np.ceil(np.log2(fs/f0))))
+        lvl = kwargs.pop('level', int(np.ceil(np.log2(fs/f0))))
         # _l if s0*2^j; fs*2**(-_l) if Hz; (1/fs)*2**_l if sec.
         sj = [_l for _l in np.arange(1, lvl+2, 1)]
         waves = dwt(signal, level=lvl, **kwargs)
